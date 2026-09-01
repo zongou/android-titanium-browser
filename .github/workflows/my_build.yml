@@ -1,0 +1,479 @@
+name: My Build
+
+on:
+  push:
+    paths: .github/workflows/my_build.yml
+  workflow_dispatch:
+    # inputs:
+    #   runner:
+    #     description: 'Runner'
+    #     required: true
+    #     type: string
+    #     default: 'self-hosted' # ubuntu-latest
+  schedule:
+    - cron: "0 0 */16 * *"
+
+permissions:
+  contents: write
+  id-token: write
+  attestations: write
+
+jobs:
+  build0:
+    runs-on: ubuntu-latest
+    outputs:
+      cacheKey: ${{ steps.generate-cacheKey.outputs.cacheKey }}
+      timoutExitStatus: ${{ steps.build.outputs.timoutExitStatus }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          submodules: true
+
+      - uses: zongou/run-ttyd-server@main
+        name: Run ttyd server
+
+      - name: Generate cache key
+        id: generate-cacheKey
+        run: |
+          timestamp=$(date +%s)
+          echo timestamp=${timestamp} >> $GITHUB_ENV
+          echo cacheKey=data-${timestamp} >> $GITHUB_OUTPUT
+
+      - name: Install dependencies
+        run: |
+          export DEBIAN_FRONTEND=noninteractive
+          sudo apt-get update
+          sudo apt-get install -y sudo lsb-release file nano git curl python3 python3-pillow imagemagick librsvg2-bin
+          sudo dpkg --add-architecture i386; sudo apt-get update; sudo apt-get install -y libgcc-s1:i386
+
+      - name: Restore data
+        id: restore-data
+        uses: actions/cache/restore@v6
+        with:
+          path: |
+            vanadium
+            depot_tools
+            chromium
+          key: ${{ steps.generate-cacheKey.outputs.cacheKey }}
+          restore-keys: |
+            data-
+
+      - name: Get depot_tools
+        if: steps.restore-data.outputs.cache-matched-key == ''
+        run: |
+          git clone --depth 1 https://chromium.googlesource.com/chromium/tools/depot_tools.git
+
+      - name: Set ENV
+        run: |
+          chmod +x *.sh
+          echo "chromium_version=$(grep -m1 -o '[0-9]\+\(\.[0-9]\+\)\{3\}' vanadium/args.gn)" >> $GITHUB_ENV
+          sed -i '1a\source ${{ github.workspace }}/common.sh' ${{ github.workspace }}/patch.sh
+          echo "${{ github.workspace }}/depot_tools" >> $GITHUB_PATH
+
+      - name: Update vanadium
+        if: steps.restore-data.outputs.cache-matched-key == ''
+        run: |
+          cd vanadium
+          git fetch --tags
+          git checkout $(git tag | sort -V | tail -n1)
+          cd ..
+          git add vanadium
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          if ! git diff --staged --quiet; then
+            git commit -am "update"
+            git push
+          fi
+
+      - name: Get chromium source
+        if: steps.restore-data.outputs.cache-matched-key == ''
+        env:
+          CHROMIUM_SOURCE: https://github.com/chromium/chromium.git
+          # CHROMIUM_SOURCE: https://chromium.googlesource.com/chromium/src.git
+        run: |
+          mkdir -p chromium/src/out/Default; cd chromium/src
+          git init
+          git remote add origin $CHROMIUM_SOURCE
+          git fetch --depth 1 $CHROMIUM_SOURCE +refs/tags/$chromium_version:chromium_$chromium_version
+          git checkout $chromium_version
+          cp ${{ github.workspace }}/.gclient ${{ github.workspace }}/chromium/.gclient
+
+      - name: Patch
+        if: steps.restore-data.outputs.cache-matched-key == ''
+        working-directory: chromium/src
+        run: |
+          source ${{ github.workspace }}/common.sh
+          # https://grapheneos.org/build#browser-and-webview
+          rm -rf ${{ github.workspace }}/vanadium/patches/*trichrome-{apk-build-targets,browser-apk-targets}.patch
+          rm -rf ${{ github.workspace }}/vanadium/patches/*{detailed,supported}-language*.patch
+          rm -rf ${{ github.workspace }}/vanadium/patches/*javascript-optimizer-{site-setting,settings-UI}.patch
+          rm -rf ${{ github.workspace }}/vanadium/patches/*component-updates.patch
+          rm -rf ${{ github.workspace }}/vanadium/patches/*{pdf,PDF,for-content-public,toolbar-button,configs-from-config-app,new-tab-card,predictive-back*}*.patch
+          # rm -rf ${{ github.workspace }}/vanadium/patches/*crashpad*.patch
+
+          replace "${{ github.workspace }}/vanadium/patches" "VANADIUM" "TITANIUM"
+          replace "${{ github.workspace }}/vanadium/patches" "Vanadium" "Titanium"
+          replace "${{ github.workspace }}/vanadium/patches" "vanadium" "titanium"
+          git am --whitespace=nowarn --keep-non-patch ${{ github.workspace }}/vanadium/patches/*.patch
+
+          gclient sync -D --no-history --nohooks
+          gclient runhooks
+          ./build/install-build-deps.sh --no-prompt
+
+          ${{ github.workspace }}/patch.sh
+
+      - name: Configure
+        if: steps.restore-data.outputs.cache-matched-key == ''
+        working-directory: chromium/src
+        run: |
+          cp ${{ github.workspace }}/args.gn out/Default/args.gn
+          gn gen out/Default # gn args out/Default; echo 'treat_warnings_as_errors = false' >> out/Default/args.gn
+          mkdir -p out/tmp out/release
+          sed -i 's/target_cpu = "arm"/target_cpu = "arm64"/' out/Default/args.gn
+          sed -i 's/io.github.jqssun.helium/com.android.desktopchromium/g' out/Default/args.gn
+
+      - name: Build
+        id: build
+        working-directory: chromium/src
+        run: |
+          if timeout 330m autoninja -C out/Default chrome_public_apk; then
+            timoutExitStatus=$?
+            echo timoutExitStatus=$timoutExitStatus >> $GITHUB_OUTPUT
+            echo build finished
+          else
+            timoutExitStatus=$?
+            echo timoutExitStatus=$timoutExitStatus >> $GITHUB_OUTPUT
+            echo build not finished
+          fi
+
+          echo timoutExitStatus=$timoutExitStatus
+
+      - name: Build not finished
+        if: ${{ steps.build.outputs.timoutExitStatus == 124 }}
+        run: echo build not finished
+
+      - name: Build finished
+        if: ${{ steps.build.outputs.timoutExitStatus == 0 }}
+        working-directory: chromium/src
+        run: |
+          echo build finished
+          mv $(find out/Default/apks -name 'Chrome*.apk') out/tmp/$chromium_version-arm64-v8a.apk
+
+      - name: Store data
+        if: ${{ steps.build.outputs.timoutExitStatus == 124 }}
+        uses: actions/cache/save@v6
+        with:
+          path: |
+            vanadium
+            depot_tools
+            chromium
+          key: ${{steps.restore-data.outputs.cache-primary-key}}
+
+      # - name: Set sign keys
+      #   env:
+      #     LOCAL_TEST_JKS: ${{ secrets.LOCAL_TEST_JKS }}
+      #     STORE_TEST_JKS: ${{ secrets.STORE_TEST_JKS }}
+      #   run: |
+      #     mkdir -p ${{ github.workspace }}/keys
+      #     echo $LOCAL_TEST_JKS | base64 -d > ${{ github.workspace }}/keys/local.properties
+      #     echo $STORE_TEST_JKS | base64 -d > ${{ github.workspace }}/keys/test.jks
+      #     unset LOCAL_TEST_JKS
+      #     unset STORE_TEST_JKS
+
+      - name: Set sign keys
+        run: |
+          mkdir -p ${{ github.workspace }}/keys
+          curl -Lk https://raw.githubusercontent.com/termux/termux-app/refs/heads/master/app/testkey_untrusted.jks > ${{ github.workspace }}/keys/test.jks
+
+      - name: Sign
+        if: ${{ steps.build.outputs.timoutExitStatus == 0 }}
+        working-directory: chromium/src
+        run: |
+          source ${{ github.workspace }}/common.sh
+          export PATH=$PWD/third_party/jdk/current/bin/:$PATH
+          export ANDROID_HOME=$PWD/third_party/android_sdk/public
+          # sign_apk out/tmp/$chromium_version-arm64-v8a.apk out/release/$chromium_version-arm64-v8a.apk
+          export apksigner=$(find $ANDROID_HOME/build-tools -name apksigner | sort | tail -n 1)
+          $apksigner sign -verbose -ks ${{ github.workspace }}/keys/test.jks \
+            --ks-pass pass:android \
+            --key-pass pass:android \
+            --ks-key-alias androiddebugkey \
+            --out out/release/$chromium_version-arm64-v8a.apk \
+            out/tmp/$chromium_version-arm64-v8a.apk
+          rm -rf ${{ github.workspace }}/keys
+
+      - name: Set
+        if: ${{ steps.build.outputs.timoutExitStatus == 0 }}
+        run: |
+          mv $(find chromium/src/out/release -name '*arm64-v8a.apk') ${{ env.chromium_version }}-${{ env.timestamp }}-arm64-v8a.apk
+
+      - name: Publish
+        if: ${{ steps.build.outputs.timoutExitStatus == 0 }}
+        uses: softprops/action-gh-release@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          name: v${{ env.chromium_version }}
+          tag_name: v${{ env.chromium_version }}
+          files: |
+            ${{ env.chromium_version }}-${{ env.timestamp }}-arm64-v8a.apk
+
+      - name: Attest
+        if: ${{ steps.build.outputs.timoutExitStatus == 0 }}
+        uses: actions/attest-build-provenance@v4
+        with:
+          subject-path: |
+            ${{ env.chromium_version }}-${{ env.timestamp }}-arm64-v8a.apk
+
+      - uses: zongou/run-ttyd-server@main
+        if: always()
+        name: Run ttyd server
+
+  build1:
+    runs-on: ubuntu-latest
+    outputs:
+      timoutExitStatus: ${{ steps.build.outputs.timoutExitStatus }}
+      cacheKey: ${{ steps.set-env.outputs.cacheKey }}
+    needs: build0
+    if: ${{ needs.build0.outputs.timoutExitStatus == 124 }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          submodules: true
+
+      - uses: zongou/run-ttyd-server@0.0.8
+        name: Run ttyd server
+
+      - name: Install dependencies
+        run: |
+          export DEBIAN_FRONTEND=noninteractive
+          sudo apt-get update
+          sudo apt-get install -y sudo lsb-release file nano git curl python3 python3-pillow imagemagick librsvg2-bin
+          sudo dpkg --add-architecture i386; sudo apt-get update; sudo apt-get install -y libgcc-s1:i386
+
+      - name: Restore data
+        id: restore-data
+        uses: actions/cache/restore@v6
+        with:
+          path: |
+            vanadium
+            depot_tools
+            chromium
+          key: ${{ needs.build0.outputs.cacheKey }}
+          restore-keys: |
+            data-
+
+      - name: Set ENV
+        id: set-env
+        run: |
+          chmod +x *.sh
+          echo "timestamp=$(date +%s)" >> $GITHUB_ENV
+          echo cacheKey=data-${timestamp} >> $GITHUB_OUTPUT
+          echo "chromium_version=$(grep -m1 -o '[0-9]\+\(\.[0-9]\+\)\{3\}' vanadium/args.gn)" >> $GITHUB_ENV
+          sed -i '1a\source ${{ github.workspace }}/common.sh' ${{ github.workspace }}/patch.sh
+          echo "${{ github.workspace }}/depot_tools" >> $GITHUB_PATH
+
+      - name: Build
+        id: build
+        working-directory: chromium/src
+        run: |
+          if timeout 330m autoninja -C out/Default chrome_public_apk; then
+            timoutExitStatus=$?
+            echo timoutExitStatus=$timoutExitStatus >> $GITHUB_OUTPUT
+            echo build finished
+          else
+            timoutExitStatus=$?
+            echo timoutExitStatus=$timoutExitStatus >> $GITHUB_OUTPUT
+            echo build not finished
+          fi
+
+          echo timoutExitStatus=$timoutExitStatus
+
+      - name: Build not inished
+        if: ${{ steps.build.outputs.timoutExitStatus == 124 }}
+        run: echo build not finished
+
+      - name: Build finished
+        if: ${{ steps.build.outputs.timoutExitStatus == 0 }}
+        working-directory: chromium/src
+        run: |
+          echo build finished
+          mv $(find out/Default/apks -name 'Chrome*.apk') out/tmp/$chromium_version-arm64-v8a.apk
+
+      - name: Store data
+        if: ${{ steps.build.outputs.timoutExitStatus == 124 }}
+        uses: actions/cache/save@v6
+        with:
+          path: |
+            vanadium
+            depot_tools
+            chromium
+          key: ${{steps.restore-data.outputs.cache-primary-key}}
+
+      - name: Set sign keys
+        run: |
+          mkdir -p ${{ github.workspace }}/keys
+          curl -Lk https://raw.githubusercontent.com/termux/termux-app/refs/heads/master/app/testkey_untrusted.jks > ${{ github.workspace }}/keys/test.jks
+
+      - name: Sign
+        if: ${{ steps.build.outputs.timoutExitStatus == 0 }}
+        working-directory: chromium/src
+        run: |
+          source ${{ github.workspace }}/common.sh
+          export PATH=$PWD/third_party/jdk/current/bin/:$PATH
+          export ANDROID_HOME=$PWD/third_party/android_sdk/public
+          # sign_apk out/tmp/$chromium_version-arm64-v8a.apk out/release/$chromium_version-arm64-v8a.apk
+          export apksigner=$(find $ANDROID_HOME/build-tools -name apksigner | sort | tail -n 1)
+          $apksigner sign -verbose -ks ${{ github.workspace }}/keys/test.jks \
+            --ks-pass pass:android \
+            --key-pass pass:android \
+            --ks-key-alias androiddebugkey \
+            --out out/release/$chromium_version-arm64-v8a.apk \
+            out/tmp/$chromium_version-arm64-v8a.apk
+          rm -rf ${{ github.workspace }}/keys
+
+      - name: Set
+        if: ${{ steps.build.outputs.timoutExitStatus == 0 }}
+        run: |
+          mv $(find chromium/src/out/release -name '*arm64-v8a.apk') ${{ env.chromium_version }}-${{ env.timestamp }}-arm64-v8a.apk
+
+      - name: Publish
+        if: ${{ steps.build.outputs.timoutExitStatus == 0 }}
+        uses: softprops/action-gh-release@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          name: v${{ env.chromium_version }}
+          tag_name: v${{ env.chromium_version }}
+          files: |
+            ${{ env.chromium_version }}-${{ env.timestamp }}-arm64-v8a.apk
+
+      - name: Attest
+        if: ${{ steps.build.outputs.timoutExitStatus == 0 }}
+        uses: actions/attest-build-provenance@v4
+        with:
+          subject-path: |
+            ${{ env.chromium_version }}-${{ env.timestamp }}-arm64-v8a.apk
+
+  build2:
+    runs-on: ubuntu-latest
+    outputs:
+      timoutExitStatus: ${{ steps.build.outputs.timoutExitStatus }}
+      cacheKey: ${{ steps.set-env.outputs.cacheKey }}
+    needs: build1
+    if: ${{ needs.build1.outputs.timoutExitStatus == 124 }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          submodules: true
+
+      - uses: zongou/run-ttyd-server@0.0.8
+        name: Run ttyd server
+
+      - name: Install dependencies
+        run: |
+          export DEBIAN_FRONTEND=noninteractive
+          sudo apt-get update
+          sudo apt-get install -y sudo lsb-release file nano git curl python3 python3-pillow imagemagick librsvg2-bin
+          sudo dpkg --add-architecture i386; sudo apt-get update; sudo apt-get install -y libgcc-s1:i386
+
+      - name: Restore data
+        id: restore-data
+        uses: actions/cache/restore@v6
+        with:
+          path: |
+            vanadium
+            depot_tools
+            chromium
+          key: ${{ needs.build1.outputs.cacheKey }}
+          restore-keys: |
+            data-
+
+      - name: Set ENV
+        id: set-env
+        run: |
+          chmod +x *.sh
+          echo "timestamp=$(date +%s)" >> $GITHUB_ENV
+          echo cacheKey=data-${timestamp} >> $GITHUB_OUTPUT
+          echo "chromium_version=$(grep -m1 -o '[0-9]\+\(\.[0-9]\+\)\{3\}' vanadium/args.gn)" >> $GITHUB_ENV
+          sed -i '1a\source ${{ github.workspace }}/common.sh' ${{ github.workspace }}/patch.sh
+          echo "${{ github.workspace }}/depot_tools" >> $GITHUB_PATH
+
+      - name: Build
+        id: build
+        working-directory: chromium/src
+        run: |
+          if timeout 330m autoninja -C out/Default chrome_public_apk; then
+            timoutExitStatus=$?
+            echo timoutExitStatus=$timoutExitStatus >> $GITHUB_OUTPUT
+            echo build finished
+          else
+            timoutExitStatus=$?
+            echo timoutExitStatus=$timoutExitStatus >> $GITHUB_OUTPUT
+            echo build not finished
+          fi
+
+          echo timoutExitStatus=$timoutExitStatus
+
+      - name: Build not finished
+        if: ${{ steps.build.outputs.timoutExitStatus == 124 }}
+        run: echo build not finished
+
+      - name: Build finished
+        if: ${{ steps.build.outputs.timoutExitStatus == 0 }}
+        working-directory: chromium/src
+        run: |
+          echo build finished
+          mv $(find out/Default/apks -name 'Chrome*.apk') out/tmp/$chromium_version-arm64-v8a.apk
+
+      - name: Store data
+        if: ${{ steps.build.outputs.timoutExitStatus == 124 }}
+        uses: actions/cache/save@v6
+        with:
+          path: |
+            vanadium
+            depot_tools
+            chromium
+          key: ${{steps.restore-data.outputs.cache-primary-key}}
+
+      - name: Set sign keys
+        run: |
+          mkdir -p ${{ github.workspace }}/keys
+          curl -Lk https://raw.githubusercontent.com/termux/termux-app/refs/heads/master/app/testkey_untrusted.jks > ${{ github.workspace }}/keys/test.jks
+
+      - name: Sign
+        if: ${{ steps.build.outputs.timoutExitStatus == 0 }}
+        working-directory: chromium/src
+        run: |
+          source ${{ github.workspace }}/common.sh
+          export PATH=$PWD/third_party/jdk/current/bin/:$PATH
+          export ANDROID_HOME=$PWD/third_party/android_sdk/public
+          # sign_apk out/tmp/$chromium_version-arm64-v8a.apk out/release/$chromium_version-arm64-v8a.apk
+          export apksigner=$(find $ANDROID_HOME/build-tools -name apksigner | sort | tail -n 1)
+          $apksigner sign -verbose -ks ${{ github.workspace }}/keys/test.jks \
+            --ks-pass pass:android \
+            --key-pass pass:android \
+            --ks-key-alias androiddebugkey \
+            --out out/release/$chromium_version-arm64-v8a.apk \
+            out/tmp/$chromium_version-arm64-v8a.apk
+          rm -rf ${{ github.workspace }}/keys
+
+      - name: Set
+        if: ${{ steps.build.outputs.timoutExitStatus == 0 }}
+        run: |
+          mv $(find chromium/src/out/release -name '*arm64-v8a.apk') ${{ env.chromium_version }}-${{ env.timestamp }}-arm64-v8a.apk
+
+      - name: Publish
+        if: ${{ steps.build.outputs.timoutExitStatus == 0 }}
+        uses: softprops/action-gh-release@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          name: v${{ env.chromium_version }}
+          tag_name: v${{ env.chromium_version }}
+          files: |
+            ${{ env.chromium_version }}-${{ env.timestamp }}-arm64-v8a.apk
+
+      - name: Attest
+        if: ${{ steps.build.outputs.timoutExitStatus == 0 }}
+        uses: actions/attest-build-provenance@v4
+        with:
+          subject-path: |
+            ${{ env.chromium_version }}-${{ env.timestamp }}-arm64-v8a.apk

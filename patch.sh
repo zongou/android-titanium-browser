@@ -1,4 +1,5 @@
 #!/bin/bash
+source /home/runner/work/android-titanium-browser/android-titanium-browser/common.sh
 
 mkdir -p chrome/android/java/res_titanium_base
 cp $SCRIPT_DIR/res/drawable/themed_app_icon.xml chrome/android/java/res_titanium_base/drawable/themed_app_icon.xml
