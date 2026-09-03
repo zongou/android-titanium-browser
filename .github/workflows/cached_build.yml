@@ -41,7 +41,7 @@ jobs:
           
           # all of these default to true, but feel free to set to
           # "false" if necessary for your workflow
-          android: false
+          android: true
           dotnet: true
           haskell: true
           large-packages: true
@@ -211,7 +211,9 @@ jobs:
           # sign_apk out/tmp/$chromium_version-arm64-v8a.apk out/release/$chromium_version-arm64-v8a.apk
           export apksigner=$(find $ANDROID_HOME/build-tools -name apksigner | sort | tail -n 1)
           $apksigner sign -verbose -ks ${{ github.workspace }}/keys/test.jks \
-            --ks-key-alias androiddebugkey \
+            --ks-pass pass:xrj45yWGLbsO7W0v \
+            --key-pass pass:xrj45yWGLbsO7W0v \
+            --ks-key-alias alias \
             --out out/release/$chromium_version-arm64-v8a.apk \
             out/tmp/$chromium_version-arm64-v8a.apk
           rm -rf ${{ github.workspace }}/keys
