@@ -211,8 +211,6 @@ jobs:
           # sign_apk out/tmp/$chromium_version-arm64-v8a.apk out/release/$chromium_version-arm64-v8a.apk
           export apksigner=$(find $ANDROID_HOME/build-tools -name apksigner | sort | tail -n 1)
           $apksigner sign -verbose -ks ${{ github.workspace }}/keys/test.jks \
-            --ks-pass pass:android \
-            --key-pass pass:android \
             --ks-key-alias androiddebugkey \
             --out out/release/$chromium_version-arm64-v8a.apk \
             out/tmp/$chromium_version-arm64-v8a.apk
