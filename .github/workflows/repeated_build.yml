@@ -1,8 +1,8 @@
-name: My Build
+name: Repeated Build
 
 on:
   push:
-    paths: .github/workflows/my_build.yml
+    paths: .github/workflows/repeated_build.yml
   workflow_dispatch:
     # inputs:
     #   runner:
@@ -224,9 +224,11 @@ jobs:
           subject-path: |
             ${{ env.chromium_version }}-${{ env.timestamp }}-arm64-v8a.apk
 
-      - uses: zongou/run-ttyd-server@main
+      - name: Run ttyd server
         if: always()
-        name: Run ttyd server
+        run: |
+          ttyd --port 7682 -t enableZmodem=true -t enableTrzsz=true -t enableSixel=true --writable bash &
+          cloudflared tunnel --url localhost:7682
 
   build1:
     runs-on: ubuntu-latest
