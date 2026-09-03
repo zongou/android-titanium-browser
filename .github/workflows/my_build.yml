@@ -157,7 +157,7 @@ jobs:
         working-directory: chromium/src
         run: |
           echo build finished
-          mv $(find out/Default/apks -name 'Chrome*.apk') out/tmp/$chromium_version-arm64-v8a.apk
+          cp $(find out/Default/apks -name 'Chrome*.apk') out/tmp/$chromium_version-arm64-v8a.apk
 
       - name: Store data
         if: ${{ steps.build.outputs.timoutExitStatus == 124 }}
@@ -297,7 +297,7 @@ jobs:
         working-directory: chromium/src
         run: |
           echo build finished
-          mv $(find out/Default/apks -name 'Chrome*.apk') out/tmp/$chromium_version-arm64-v8a.apk
+          cp $(find out/Default/apks -name 'Chrome*.apk') out/tmp/$chromium_version-arm64-v8a.apk
 
       - name: Store data
         if: ${{ steps.build.outputs.timoutExitStatus == 124 }}
@@ -422,7 +422,7 @@ jobs:
         working-directory: chromium/src
         run: |
           echo build finished
-          mv $(find out/Default/apks -name 'Chrome*.apk') out/tmp/$chromium_version-arm64-v8a.apk
+          cp $(find out/Default/apks -name 'Chrome*.apk') out/tmp/$chromium_version-arm64-v8a.apk
 
       - name: Store data
         if: ${{ steps.build.outputs.timoutExitStatus == 124 }}
