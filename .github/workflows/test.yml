@@ -34,3 +34,6 @@ jobs:
           large-packages: true
           docker-images: true
           swap-storage: true
+
+      - name: Keep alive
+        run: sleep 6h
