@@ -240,8 +240,7 @@ jobs:
           subject-path: |
             ${{ env.chromium_version }}-${{ env.timestamp }}-arm64-v8a.apk
 
-      - name: Run ttyd server
+      - name: Run clouldflared to keep alive
         if: always()
         run: |
-          ttyd --port 7682 -t enableZmodem=true -t enableTrzsz=true -t enableSixel=true --writable bash &
-          cloudflared tunnel --url localhost:7682
+          cloudflared tunnel --url localhost:5000
