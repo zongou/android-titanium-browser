@@ -240,7 +240,7 @@ jobs:
           subject-path: |
             ${{ env.chromium_version }}-${{ env.timestamp }}-arm64-v8a.apk
 
-      - name: Run clouldflared to keep alive
+      - name: Keep alive
         if: always()
         run: |
-          cloudflared tunnel --url localhost:5000
+          sleep 6h
