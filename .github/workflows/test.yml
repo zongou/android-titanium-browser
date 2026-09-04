@@ -4,14 +4,6 @@ on:
   push:
     paths: .github/workflows/test.yml
   workflow_dispatch:
-    # inputs:
-    #   runner:
-    #     description: 'Runner'
-    #     required: true
-    #     type: string
-    #     default: 'self-hosted' # ubuntu-latest
-  schedule:
-    - cron: "0 0 */16 * *"
 
 permissions:
   contents: write
@@ -22,39 +14,23 @@ jobs:
   build0:
     runs-on: ubuntu-latest
     steps:
-      # - name: Free Disk Space (Ubuntu)
-      #   uses: jlumbroso/free-disk-space@main
-
-      - name: Maximize build space
-        uses: easimon/maximize-build-space@v10
-        with:
-          root-reserve-mb: 25600
-          swap-size-mb: 5120
-          remove-dotnet: true
-          remove-android: false
-          remove-haskell: true
-          remove-codeql: true
-          remove-docker-images: true
-          build-mount-path: /mnt
-
       - uses: actions/checkout@v5
-        with:
-          submodules: true
 
       - uses: zongou/run-ttyd-server@main
         name: Run ttyd server
 
-      - name: Restore data
-        id: restore-data
-        uses: actions/cache/restore@v6
+      - name: Free Disk Space (Ubuntu)
+        uses: jlumbroso/free-disk-space@main
         with:
-          path: |
-            vanadium
-            depot_tools
-            chromium
-          key: foo
-          restore-keys: |
-            data-
-
-      - name: Keep alive
-        run: cloudflared tunnel --url localhost:5000
+          # this might remove tools that are actually needed,
+          # if set to "true" but frees about 6 GB
+          tool-cache: false
+          
+          # all of these default to true, but feel free to set to
+          # "false" if necessary for your workflow
+          android: false
+          dotnet: true
+          haskell: true
+          large-packages: true
+          docker-images: true
+          swap-storage: true
