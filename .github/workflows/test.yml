@@ -16,8 +16,12 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - uses: zongou/run-ttyd-server@main
+      # - uses: zongou/run-ttyd-server@main
+      #   name: Run ttyd server
+
+      - uses: zongou/run-vscode-server@main
         name: Run ttyd server
+
 
       - name: Free Disk Space (Ubuntu)
         uses: jlumbroso/free-disk-space@main
