@@ -75,6 +75,7 @@ jobs:
         uses: actions/cache/restore@v6
         with:
           path: |
+            vanadium
             depot_tools
             chromium
           key: data-${{ env.chromium_version }}-
@@ -372,7 +373,7 @@ jobs:
             vanadium
             depot_tools
             chromium
-          key: ${{steps.restore-data.outputs.cache-primary-key}}
+          key: ${{steps.generate-cacheKey.outputs.cacheKey}}
 
       # - name: Set sign keys
       #   env:
@@ -527,7 +528,7 @@ jobs:
             vanadium
             depot_tools
             chromium
-          key: ${{steps.restore-data.outputs.cache-primary-key}}
+          key: ${{steps.generate-cacheKey.outputs.cacheKey}}
 
       - name: Set sign keys
         run: |
@@ -665,7 +666,7 @@ jobs:
             vanadium
             depot_tools
             chromium
-          key: ${{steps.restore-data.outputs.cache-primary-key}}
+          key: ${{steps.generate-cacheKey.outputs.cacheKey}}
 
       - name: Set sign keys
         run: |

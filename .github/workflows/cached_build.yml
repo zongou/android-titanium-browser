@@ -70,6 +70,7 @@ jobs:
         uses: actions/cache/restore@v6
         with:
           path: |
+            vanadium
             depot_tools
             chromium
           key: data-${{ env.chromium_version }}-
@@ -360,6 +361,7 @@ jobs:
         uses: actions/cache/save@v6
         with:
           path: |
+            vanadium
             depot_tools
             chromium
           key: ${{ steps.generate-cacheKey.outputs.cacheKey }}
