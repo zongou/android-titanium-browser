@@ -302,7 +302,7 @@ sed -i 's|while (!(locale_folder = locales.Next()).empty()) {|&if (locale_folder
 sed -i '/extension_l10n_util::ValidateExtensionLocales($/,/error) &&$/{s|extension_l10n_util::ValidateExtensionLocales(|(extension_path_.IsVirtualDocumentPath() \|\| &|;s|error) &&|error)) \&\&|}' extensions/browser/unpacked_installer.cc
 
 # ext: ntp
-if version_lt "$VERSION" "152.0.7969.0"; then
+if version_lt "$chromium_version" "152.0.7969.0"; then
 sed -i 's|import org.chromium.chrome.browser.url_constants.UrlConstantResolverFactory;|&\nimport org.chromium.chrome.browser.url_constants.UrlOverrideUtils;|' chrome/android/java/src/org/chromium/chrome/browser/ChromeTabbedActivity.java
 sed -i 's|if (isTabNtp \&\& !currentTab.isNativePage()) {|if (isTabNtp \&\& !currentTab.isNativePage() \&\& !UrlOverrideUtils.isNtpOverrideEnabled() \&\& !UrlOverrideUtils.isWebUiNtpOverrideEnabled()) {|' chrome/android/java/src/org/chromium/chrome/browser/ChromeTabbedActivity.java
 else
