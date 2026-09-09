@@ -574,8 +574,10 @@ if ! git diff --staged --quiet; then
   git commit -m titanium
   git switch -c titanium
 fi
-cd $SCRIPT_DIR
-tar -c $chromium_srcdir/.git $chromium_srcdir/out  | xz -T0 -v > /tmp/data.tar.xz
+
+git --git-dir=$chromium_srcdir/.git bundle create /tmp/chromium.bundle --all
+git --git-dir=$chromium_srcdir/v8/.git bundle create /tmp/v8.bundle --all
+git --git-dir=$chromium_srcdir/third_party/search_engines_data/resources/.git bundle create /tmp/search_engines_data_resource.bundle --all
 ```
 
 ### cache_rebuild
