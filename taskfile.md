@@ -576,11 +576,11 @@ if ! git diff --staged --quiet; then
 fi
 
 git --git-dir=$chromium_srcdir/.git bundle create /tmp/chromium.bundle --all
-git --git-dir=$chromium_srcdir/v8/.git bundle create /tmp/v8.bundle --all
-git --git-dir=$chromium_srcdir/third_party/search_engines_data/resources/.git bundle create /tmp/search_engines_data_resource.bundle --all
+tar -C $chromium_srcdir/v8 -c .git | zstd -T0 -v > /tmp/v8.tar.zst
+tar -C $chromium_srcdir/third_party/search_engines_data/resources -c .git | zstd -T0 -v > /tmp/search_engines_data_resource.tar.zst
 tar -C $chromium_srcdir -c out | zstd -T0 > /tmp/chromium-obj.tar.zst
 
-du -ahd0 /tmp/chromium.bundle /tmp/v8.bundle /tmp/search_engines_data_resource.bundle /tmp/chromium-obj.tar.zst
+du -ahd0 /tmp/chromium.bundle /tmp/v8.tar.zst /tmp/search_engines_data_resource.tar.zst /tmp/chromium-obj.tar.zst
 ```
 
 ### cache_restore
@@ -588,12 +588,21 @@ du -ahd0 /tmp/chromium.bundle /tmp/v8.bundle /tmp/search_engines_data_resource.b
 ```sh
 tmp_chromium_dir=/tmp/chromium
 if ! test -d $tmp_chromium_dir; then
-  git clone /tmp/chromium.bundle $tmp_chromium_dir --depth=1
+  git clone /tmp/chromium.bundle $tmp_chromium_dir
 fi
 # cd $tmp_chromium_dir
 # git config -f $tmp_chromium_dir/.gitmodules submodule
-git config -f $tmp_chromium_dir/.gitmodules submodule.v8.url /tmp/v8.bundle
-git config -f $tmp_chromium_dir/.gitmodules submodule.third_party/search_engines_data/resources.url /tmp/search_engines_data_resource.bundle
+zstd -d -T0 -v </tmp/v8.tar.zst | tar -C $tmp_chromium_dir/v8 -xv
+cd $tmp_chromium_dir/v8
+git restore .
+
+zstd -d -T0 -v </tmp/search_engines_data_resource.tar.zst | tar -C $tmp_chromium_dir/third_party/search_engines_data/resources -xv
+cd $tmp_chromium_dir/third_party/search_engines_data/resources
+git restore .
+
+git --git-dir=$tmp_chromium_dir/v8/.git log --oneline | cat
+git --git-dir=$tmp_chromium_dir/third_party/search_engines_data/resources/.git log --oneline | cat
+
 tar -C $tmp_chromium_dir -xvf /tmp/chromium-obj.tar.zst
 ```
 
@@ -602,8 +611,6 @@ tar -C $tmp_chromium_dir -xvf /tmp/chromium-obj.tar.zst
 ```sh
 export chromium_srcdir=/tmp/chromium
 eval "$(cr -c common)"
-echo $chromium_srcdir
-exit
 
 cr get:build_tools
 cr get:depot_tools
@@ -611,5 +618,3 @@ cr get:depot_tools
 cr sync_and_run_hooks
 cr build
 ```
-
-commit 277965c93035888c413f5286d2184e57667790ba (HEAD)
