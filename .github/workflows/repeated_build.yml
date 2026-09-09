@@ -10,6 +10,11 @@ on:
         required: true
         type: boolean
         default: false
+      timeout:
+        description: "Timeout in minutes"
+        required: false
+        type: number
+        default: 300
   schedule:
     - cron: "0 0 */16 * *"
 
@@ -337,7 +342,7 @@ jobs:
         id: build
         working-directory: chromium/src
         run: |
-          if timeout 330m autoninja -C out/Default chrome_public_apk; then
+          if timeout ${{  inputs.timeout }} autoninja -C out/Default chrome_public_apk; then
             timoutExitStatus=$?
             echo timoutExitStatus=$timoutExitStatus >> $GITHUB_OUTPUT
             echo build finished
@@ -492,7 +497,7 @@ jobs:
         id: build
         working-directory: chromium/src
         run: |
-          if timeout 330m autoninja -C out/Default chrome_public_apk; then
+          if timeout ${{  inputs.timeout }} autoninja -C out/Default chrome_public_apk; then
             timoutExitStatus=$?
             echo timoutExitStatus=$timoutExitStatus >> $GITHUB_OUTPUT
             echo build finished
@@ -630,7 +635,7 @@ jobs:
         id: build
         working-directory: chromium/src
         run: |
-          if timeout 330m autoninja -C out/Default chrome_public_apk; then
+          if timeout ${{  inputs.timeout }} autoninja -C out/Default chrome_public_apk; then
             timoutExitStatus=$?
             echo timoutExitStatus=$timoutExitStatus >> $GITHUB_OUTPUT
             echo build finished
