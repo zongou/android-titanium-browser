@@ -27,8 +27,7 @@ cr build
 export SCRIPT_DIR=$(dirname $CR_FILE)
 export PATH=$SCRIPT_DIR/depot_tools:$PATH
 export chromium_version=$(grep -m1 -o '[0-9]\+\(\.[0-9]\+\)\{3\}' vanadium/args.gn)
-export chromium_srcdir=/tmp/chromium
-# export chromium_srcdir=$SCRIPT_DIR/chromium/src
+export chromium_srcdir=${chromium_srcdir-$SCRIPT_DIR/chromium/src}
 
 replace() {
   export org=$2 new=$3
@@ -602,9 +601,9 @@ tar -C $tmp_chromium_dir -xvf /tmp/chromium-obj.tar.zst
 
 ```sh
 export chromium_srcdir=/tmp/chromium
-echo ${chromium_srcdir+exists}
-echo ${chromium_srcdir-notexists}
-echo ${chromium_srcdir-$PWD/chromium/src}
+eval "$(cr -c common)"
+echo $chromium_srcdir
+exit
 
 cr get:build_tools
 cr get:depot_tools
