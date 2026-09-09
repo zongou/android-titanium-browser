@@ -28,6 +28,7 @@ export SCRIPT_DIR=$(dirname $CR_FILE)
 export PATH=$SCRIPT_DIR/depot_tools:$PATH
 export chromium_version=$(grep -m1 -o '[0-9]\+\(\.[0-9]\+\)\{3\}' vanadium/args.gn)
 export chromium_srcdir=/tmp/chromium
+# export chromium_srcdir=$SCRIPT_DIR/chromium/src
 
 replace() {
   export org=$2 new=$3
@@ -578,7 +579,9 @@ fi
 git --git-dir=$chromium_srcdir/.git bundle create /tmp/chromium.bundle --all
 git --git-dir=$chromium_srcdir/v8/.git bundle create /tmp/v8.bundle --all
 git --git-dir=$chromium_srcdir/third_party/search_engines_data/resources/.git bundle create /tmp/search_engines_data_resource.bundle --all
-tar -C $chromium_srcdir -c out | xz -T0 -v > /tmp/chromium-obj.tar.xz
+tar -C $chromium_srcdir -c out | zstd -T0 > /tmp/chromium-obj.tar.zst
+
+du -ahd0 /tmp/chromium.bundle /tmp/v8.bundle /tmp/search_engines_data_resource.bundle /tmp/chromium-obj.tar.zst
 ```
 
 ### cache_restore
@@ -592,7 +595,7 @@ fi
 # git config -f $tmp_chromium_dir/.gitmodules submodule
 git config -f $tmp_chromium_dir/.gitmodules submodule.v8.url /tmp/v8.bundle
 git config -f $tmp_chromium_dir/.gitmodules submodule.third_party/search_engines_data/resources.url /tmp/search_engines_data_resource.bundle
-tar -C $tmp_chromium_dir -xf /tmp/chromium-obj.tar.xz
+tar -C $tmp_chromium_dir -xvf /tmp/chromium-obj.tar.zst
 ```
 
 ### cache_rebuild
