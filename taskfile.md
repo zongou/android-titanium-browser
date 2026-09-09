@@ -575,7 +575,7 @@ if ! git diff --staged --quiet; then
   git switch -c titanium
 fi
 
-git --git-dir=$chromium_srcdir/.git bundle create /tmp/chromium.bundle --all
+git --git-dir=$chromium_srcdir/.git bundle create /tmp/chromium.bundle HEAD
 tar -C $chromium_srcdir/v8 -c .git | zstd -T0 -v > /tmp/v8.tar.zst
 tar -C $chromium_srcdir/third_party/search_engines_data/resources -c .git | zstd -T0 -v > /tmp/search_engines_data_resource.tar.zst
 tar -C $chromium_srcdir -c out | zstd -T0 > /tmp/chromium-obj.tar.zst
@@ -586,30 +586,32 @@ du -ahd0 /tmp/chromium.bundle /tmp/v8.tar.zst /tmp/search_engines_data_resource.
 ### cache_restore
 
 ```sh
-tmp_chromium_dir=/tmp/chromium
+tmp_chromium_dir=chromium_new/src
 if ! test -d $tmp_chromium_dir; then
+  mkdir -p /tmp/chromium
   git clone /tmp/chromium.bundle $tmp_chromium_dir
 fi
 # cd $tmp_chromium_dir
 # git config -f $tmp_chromium_dir/.gitmodules submodule
-zstd -d -T0 -v </tmp/v8.tar.zst | tar -C $tmp_chromium_dir/v8 -xv
+zstd -d -T0 -v </tmp/v8.tar.zst | tar -C $tmp_chromium_dir/v8 -x
 cd $tmp_chromium_dir/v8
 git restore .
 
-zstd -d -T0 -v </tmp/search_engines_data_resource.tar.zst | tar -C $tmp_chromium_dir/third_party/search_engines_data/resources -xv
+zstd -d -T0 -v </tmp/search_engines_data_resource.tar.zst | tar -C $tmp_chromium_dir/third_party/search_engines_data/resources -x
 cd $tmp_chromium_dir/third_party/search_engines_data/resources
 git restore .
 
-git --git-dir=$tmp_chromium_dir/v8/.git log --oneline | cat
-git --git-dir=$tmp_chromium_dir/third_party/search_engines_data/resources/.git log --oneline | cat
+git --git-dir=$tmp_chromium_dir/.git log --oneline | head -n1
+git --git-dir=$tmp_chromium_dir/v8/.git log --oneline | head -n1
+git --git-dir=$tmp_chromium_dir/third_party/search_engines_data/resources/.git log --oneline | head -n1
 
-tar -C $tmp_chromium_dir -xvf /tmp/chromium-obj.tar.zst
+tar -C $tmp_chromium_dir -xf /tmp/chromium-obj.tar.zst
 ```
 
 ### cache_rebuild
 
 ```sh
-export chromium_srcdir=/tmp/chromium
+export chromium_srcdir=chromium_new/src
 eval "$(cr -c common)"
 
 cr get:build_tools
@@ -617,4 +619,15 @@ cr get:depot_tools
 
 cr sync_and_run_hooks
 cr build
+```
+
+### demo
+
+```sh
+echo ------------- store --------------
+cr cache_store
+echo ------------- restore -------------
+cr cache_restore
+echo ------------- build ---------------
+cr cache_rebuild
 ```
