@@ -100,14 +100,14 @@ update vanadium version
 cd vanadium
 git fetch --tags
 git checkout $(git tag | sort -V | tail -n1)
-cd ..
-git add vanadium
-git config --global user.name 'github-actions[bot]'
-git config --global user.email 'github-actions[bot]@users.noreply.github.com'
-if ! git diff --staged --quiet; then
-  git commit -am "update"
-  git push
-fi
+# cd ..
+# git add vanadium
+# git config --global user.name 'github-actions[bot]'
+# git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+# if ! git diff --staged --quiet; then
+#   git commit -am "update"
+#   git push
+# fi
 ```
 
 ### get:chromium_src
@@ -117,7 +117,7 @@ get chromium source
 ```sh
 eval "$(cr -c common)"
 export CHROMIUM_SOURCE=https://github.com/chromium/chromium.git
-if ! test -d $chromium_srcdir; then
+if ! test -d "$chromium_srcdir"; then
   mkdir -p $chromium_srcdir
   cd $chromium_srcdir
   git init --initial-branch=main
@@ -125,6 +125,7 @@ if ! test -d $chromium_srcdir; then
   git fetch --depth 1 $CHROMIUM_SOURCE +refs/tags/$chromium_version:chromium_$chromium_version
   git checkout $chromium_version
 fi
+echo get source done
 ```
 
 ### apply_vanadium_patches
@@ -133,7 +134,9 @@ git apply vanadium patches
 
 ```sh
 eval "$(cr -c common)"
+echo apply vanadium patches
 cd $chromium_srcdir
+pwd
 # https://grapheneos.org/build#browser-and-webview
 rm -rf $SCRIPT_DIR/vanadium/patches/*trichrome-{apk-build-targets,browser-apk-targets}.patch
 rm -rf $SCRIPT_DIR/vanadium/patches/*{detailed,supported}-language*.patch
@@ -345,7 +348,7 @@ export PATCHED=1
 
 ### configure
 
-configure build target and output
+configure target and output dir
 
 ```sh
 eval "$(cr -c common)"
@@ -405,7 +408,7 @@ nohup dufs --allow-all >/tmp/dufs.log 2>&1 &
 ```sh
 eval "$(cr -c common)"
 (
-  cd $SCRIPT_DIR/$chromium_srcdir
+  cd $chromium_srcdir
   #   git reset --hard $(git tag --points-at HEAD)
   if test -d .git/rebase-apply; then
     git am --abort
@@ -423,10 +426,10 @@ eval "$(cr -c common)"
 ### localsign
 
 ```sh
+eval "$(cr -c common)"
 export JAVA_HOME=/opt/jdk-25.0.2+10
 export PATH=$JAVA_HOME/bin:$PATH
 apksigner=/home/user/Android/build-tools/35.0.0/apksigner
-chromium_chromium_version=152.0.7977.75
 
 $apksigner sign -verbose -ks testkey_untrusted.jks \
   --ks-pass "pass:xrj45yWGLbsO7W0v" \
@@ -551,7 +554,17 @@ cat patch.sh | sed -E 's/^#\!\/bin\/bash//' | sed -E '/^#[[:space:]]*sed/!s/^# (
 echo '```'
 ````
 
-## cache_save
+### update_task
+
+```sh
+git add taskfile.md
+git commit -m "update taskfile.md"
+git push
+```
+
+## cache
+
+### cache_save
 
 ```sh
 eval "$(cr -c common)"
@@ -565,7 +578,7 @@ cd $SCRIPT_DIR
 tar -c $chromium_srcdir/.git $chromium_srcdir/out  | xz -T0 -v > /tmp/data.tar.xz
 ```
 
-## cache_rebuild
+### cache_rebuild
 
 ```sh
 tar -xvf /tmp/data.tar.xz
@@ -577,12 +590,4 @@ cr get:depot_tools
 
 cr sync_and_run_hooks
 cr build
-```
-
-## update_task
-
-```sh
-git add taskfile.md
-git commit -m "update taskfile.md"
-git push
 ```
