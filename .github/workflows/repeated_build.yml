@@ -433,12 +433,6 @@ jobs:
           subject-path: |
             ${{ env.chromium_version }}-${{ env.timestamp }}-arm64-v8a.apk
 
-      - name: Run ttyd server
-        if: always()
-        run: |
-          ttyd --port 7682 -t enableZmodem=true -t enableTrzsz=true -t enableSixel=true --writable bash &
-          cloudflared tunnel --url localhost:7682
-
   build1:
     runs-on: ubuntu-latest
     outputs:
