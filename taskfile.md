@@ -24,9 +24,10 @@ cr build
 ### common
 
 ```SH
-export SCRIPT_DIR=$PWD
+export SCRIPT_DIR=$(dirname $CR_FILE)
 export PATH=$SCRIPT_DIR/depot_tools:$PATH
 export chromium_version=$(grep -m1 -o '[0-9]\+\(\.[0-9]\+\)\{3\}' vanadium/args.gn)
+export chromium_srcdir=$SCRIPT_DIR/chromium/src
 
 replace() {
   export org=$2 new=$3
@@ -99,14 +100,14 @@ update vanadium version
 cd vanadium
 git fetch --tags
 git checkout $(git tag | sort -V | tail -n1)
-# cd ..
-# git add vanadium
-# git config --global user.name 'github-actions[bot]'
-# git config --global user.email 'github-actions[bot]@users.noreply.github.com'
-# if ! git diff --staged --quiet; then
-#   git commit -am "update"
-#   git push
-# fi
+cd ..
+git add vanadium
+git config --global user.name 'github-actions[bot]'
+git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+if ! git diff --staged --quiet; then
+  git commit -am "update"
+  git push
+fi
 ```
 
 ### get:chromium_src
@@ -116,9 +117,9 @@ get chromium source
 ```sh
 eval "$(cr -c common)"
 export CHROMIUM_SOURCE=https://github.com/chromium/chromium.git
-if ! test -d chromium; then
-  mkdir -p chromium/src
-  cd chromium/src
+if ! test -d $chromium_srcdir; then
+  mkdir -p $chromium_srcdir
+  cd $chromium_srcdir
   git init --initial-branch=main
   git remote add origin $CHROMIUM_SOURCE
   git fetch --depth 1 $CHROMIUM_SOURCE +refs/tags/$chromium_version:chromium_$chromium_version
@@ -132,7 +133,7 @@ git apply vanadium patches
 
 ```sh
 eval "$(cr -c common)"
-cd chromium/src
+cd $chromium_srcdir
 # https://grapheneos.org/build#browser-and-webview
 rm -rf $SCRIPT_DIR/vanadium/patches/*trichrome-{apk-build-targets,browser-apk-targets}.patch
 rm -rf $SCRIPT_DIR/vanadium/patches/*{detailed,supported}-language*.patch
@@ -158,7 +159,7 @@ this will fetch titanium extension, needed for patch
 ```sh
 eval "$(cr -c common)"
 cp $SCRIPT_DIR/.gclient $SCRIPT_DIR/chromium/.gclient
-cd chromium/src
+cd $chromium_srcdir
 gclient sync -D --no-history --nohooks
 gclient runhooks
 ./build/install-build-deps.sh --no-prompt
@@ -170,7 +171,7 @@ apply patches
 
 ```sh
 eval "$(cr -c common)"
-cd chromium/src
+cd $chromium_srcdir
 
 mkdir -p chrome/android/java/res_titanium_base
 cp $SCRIPT_DIR/res/drawable/themed_app_icon.xml chrome/android/java/res_titanium_base/drawable/themed_app_icon.xml
@@ -348,10 +349,10 @@ configure build target and output
 
 ```sh
 eval "$(cr -c common)"
-mkdir -p $SCRIPT_DIR/chromium/src/out/Default
-mkdir -p $SCRIPT_DIR/chromium/src/out/tmp
-mkdir -p $SCRIPT_DIR/chromium/src/out/release
-cd chromium/src
+mkdir -p $SCRIPT_DIR/$chromium_srcdir/out/Default
+mkdir -p $SCRIPT_DIR/$chromium_srcdir/out/tmp
+mkdir -p $SCRIPT_DIR/$chromium_srcdir/out/release
+cd $chromium_srcdir
 cp $SCRIPT_DIR/args.gn out/Default/args.gn
 sed -i 's/target_cpu = "arm"/target_cpu = "arm64"/' out/Default/args.gn
 sed -i 's/io.github.jqssun.helium/com.android.desktopchromium/g' out/Default/args.gn
@@ -364,7 +365,7 @@ autoninja build target
 
 ```sh
 eval "$(cr -c common)"
-cd chromium/src
+cd $chromium_srcdir
 autoninja -C out/Default chrome_public_apk
 ```
 
@@ -373,7 +374,7 @@ autoninja -C out/Default chrome_public_apk
 ### archive
 
 ```sh
-tar -c .git depot_tools chromium/src/.git | xz -T0 -v >build_browser.tar.xz
+tar -c .git depot_tools $chromium_srcdir/.git | xz -T0 -v >build_browser.tar.xz
 ```
 
 ### serve
@@ -404,7 +405,7 @@ nohup dufs --allow-all >/tmp/dufs.log 2>&1 &
 ```sh
 eval "$(cr -c common)"
 (
-  cd $SCRIPT_DIR/chromium/src
+  cd $SCRIPT_DIR/$chromium_srcdir
   #   git reset --hard $(git tag --points-at HEAD)
   if test -d .git/rebase-apply; then
     git am --abort
@@ -554,21 +555,21 @@ echo '```'
 
 ```sh
 eval "$(cr -c common)"
-cd chromium/src
+cd $chromium_srcdir
 if ! git diff --staged --quiet; then
   git add -A
   git commit -m titanium
   git switch -c titanium
 fi
 cd $SCRIPT_DIR
-tar -c chromium/src/.git chromium/src/out  | xz -T0 -v > /tmp/data.tar.xz
+tar -c $chromium_srcdir/.git $chromium_srcdir/out  | xz -T0 -v > /tmp/data.tar.xz
 ```
 
 ## cache_rebuild
 
 ```sh
 tar -xvf /tmp/data.tar.xz
-cd chromium/src
+cd $chromium_srcdir
 git restore .
 
 cr get:build_tools
