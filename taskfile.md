@@ -27,7 +27,7 @@ cr build
 export SCRIPT_DIR=$(dirname $CR_FILE)
 export PATH=$SCRIPT_DIR/depot_tools:$PATH
 export chromium_version=$(grep -m1 -o '[0-9]\+\(\.[0-9]\+\)\{3\}' vanadium/args.gn)
-export chromium_srcdir=$SCRIPT_DIR/chromium/src
+export chromium_srcdir=/tmp/chromium
 
 replace() {
   export org=$2 new=$3
@@ -161,7 +161,7 @@ this will fetch titanium extension, needed for patch
 
 ```sh
 eval "$(cr -c common)"
-cp $SCRIPT_DIR/.gclient $SCRIPT_DIR/chromium/.gclient
+cp $SCRIPT_DIR/.gclient $chromium_srcdir/../.gclient
 cd $chromium_srcdir
 gclient sync -D --no-history --nohooks
 gclient runhooks
@@ -564,7 +564,7 @@ git push
 
 ## cache
 
-### cache_save
+### cache_store
 
 ```sh
 eval "$(cr -c common)"
@@ -578,14 +578,30 @@ fi
 git --git-dir=$chromium_srcdir/.git bundle create /tmp/chromium.bundle --all
 git --git-dir=$chromium_srcdir/v8/.git bundle create /tmp/v8.bundle --all
 git --git-dir=$chromium_srcdir/third_party/search_engines_data/resources/.git bundle create /tmp/search_engines_data_resource.bundle --all
+tar -C $chromium_srcdir -c out | xz -T0 -v > /tmp/chromium-obj.tar.xz
+```
+
+### cache_restore
+
+```sh
+tmp_chromium_dir=/tmp/chromium
+if ! test -d $tmp_chromium_dir; then
+  git clone /tmp/chromium.bundle $tmp_chromium_dir --depth=1
+fi
+# cd $tmp_chromium_dir
+# git config -f $tmp_chromium_dir/.gitmodules submodule
+git config -f $tmp_chromium_dir/.gitmodules submodule.v8.url /tmp/v8.bundle
+git config -f $tmp_chromium_dir/.gitmodules submodule.third_party/search_engines_data/resources.url /tmp/search_engines_data_resource.bundle
+tar -C $tmp_chromium_dir -xf /tmp/chromium-obj.tar.xz
 ```
 
 ### cache_rebuild
 
 ```sh
-tar -xvf /tmp/data.tar.xz
-cd $chromium_srcdir
-git restore .
+export chromium_srcdir=/tmp/chromium
+echo ${chromium_srcdir+exists}
+echo ${chromium_srcdir-notexists}
+echo ${chromium_srcdir-$PWD/chromium/src}
 
 cr get:build_tools
 cr get:depot_tools
