@@ -333,7 +333,7 @@ jobs:
         id: build
         working-directory: chromium/src
         run: |
-          if timeout ${{  inputs.timeout }} autoninja -C out/Default chrome_public_apk; then
+          if timeout ${{  inputs.timeout || 300 }}m autoninja -C out/Default chrome_public_apk; then
             timoutExitStatus=$?
             echo timoutExitStatus=$timoutExitStatus >> $GITHUB_OUTPUT
             echo build finished
