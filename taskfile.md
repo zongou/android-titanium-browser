@@ -624,10 +624,19 @@ cr build
 ### demo
 
 ```sh
-echo ------------- store --------------
-cr cache_store
-echo ------------- restore -------------
-cr cache_restore
-echo ------------- build ---------------
-cr cache_rebuild
+(cd chromium/src && git submodule foreach --quiet 'echo "$sm_path"' > /tmp/submodules)
+tar -C chromium/src -cv --exclude-from=/tmp/submodules ./ chromium/src/v8 chromium/src/third_party/search_engines_data/resources | zstd -T0 -v > /tmp/data
+du -ahd0 /tmp/data
+
+export chromium_srcdir=chromium_new/src
+eval "$(cr -c common)"
+rm -rf chromium_new
+mkdir -p chromium_new/src
+zstd -T0 -d < /tmp/data | tar -C chromium_new/src -x
+
+cr get:build_tools
+cr get:depot_tools
+
+cr sync_and_run_hooks
+cr build
 ```
