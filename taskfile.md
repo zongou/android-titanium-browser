@@ -352,11 +352,11 @@ configure target and output dir
 
 ```sh
 eval "$(cr -c common)"
-mkdir -p $SCRIPT_DIR/$chromium_srcdir/out/Default
-mkdir -p $SCRIPT_DIR/$chromium_srcdir/out/tmp
-mkdir -p $SCRIPT_DIR/$chromium_srcdir/out/release
+mkdir -p $chromium_srcdir/out/Default
+mkdir -p $chromium_srcdir/out/tmp
+mkdir -p $chromium_srcdir/out/release
+cp $SCRIPT_DIR/args.gn $chromium_srcdir/out/Default/args.gn
 cd $chromium_srcdir
-cp $SCRIPT_DIR/args.gn out/Default/args.gn
 sed -i 's/target_cpu = "arm"/target_cpu = "arm64"/' out/Default/args.gn
 sed -i 's/io.github.jqssun.helium/com.android.desktopchromium/g' out/Default/args.gn
 gn gen out/Default # gn args out/Default; echo 'treat_warnings_as_errors = false' >> out/Default/args.gn
@@ -591,3 +591,5 @@ cr get:depot_tools
 cr sync_and_run_hooks
 cr build
 ```
+
+commit 277965c93035888c413f5286d2184e57667790ba (HEAD)
