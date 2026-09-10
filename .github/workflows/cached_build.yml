@@ -434,7 +434,7 @@ jobs:
   rebuild:
     runs-on: ubuntu-latest
     steps:
-      - uses: ./.github/workflows/cached_build
+      - uses: ./.github/workflows/cached_build.yml
         with:
           ttyd-credential: ${{ inputs.ttyd-credential }}
           timeout: ${{ inputs.timeout }}
