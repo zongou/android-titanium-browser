@@ -510,6 +510,7 @@ cr build
 ### demo
 
 ```sh
+cr clean
 (cd chromium/src && git submodule foreach --quiet 'echo "./$sm_path"' > /tmp/list)
 # tar -C chromium/src -cv --exclude-from=/tmp/list ./.git ./v8 ./third_party/search_engines_data/resources | zstd -T0 -v > /tmp/data
 # du -ahd0 /tmp/data
@@ -518,10 +519,10 @@ export chromium_srcdir=chromium_new/src
 eval "$(cr -c common)"
 which -a gn
 
-# rm -rf chromium_new
-# mkdir -p chromium_new/src
-# tar -C chromium/src -cv ./.git ./v8 ./third_party/search_engines_data/resources | tar -C chromium_new/src -x
-# (cd chromium_new/src && git restore .)
+rm -rf chromium_new
+mkdir -p chromium_new/src
+tar -C chromium/src -cv ./.git ./v8 ./third_party/search_engines_data/resources | tar -C chromium_new/src -x
+(cd chromium_new/src && git restore .)
 
 cr get:build_tools
 cr get:depot_tools
