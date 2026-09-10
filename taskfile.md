@@ -28,6 +28,7 @@ export SCRIPT_DIR=$(dirname $CR_FILE)
 export PATH=$SCRIPT_DIR/depot_tools:$PATH
 export chromium_version=$(grep -m1 -o '[0-9]\+\(\.[0-9]\+\)\{3\}' vanadium/args.gn)
 export chromium_srcdir=${chromium_srcdir-$SCRIPT_DIR/chromium/src}
+export CCACHE_DIR=$SCRIPT_DIR/chromium/ccache
 
 replace() {
   export org=$2 new=$3
@@ -353,17 +354,16 @@ configure target and output dir
 
 ```sh
 eval "$(cr -c common)"
-echo "--------------- $chromium_srcdir"
 # Generate ccache config
-mkdir -p $HOME/.ccache/
-CCACHE_CONFIG=$HOME/.ccache/ccache.conf
-if ! test -f $CCACHE_CONFIG; then
-  echo 'compiler_check = none' >> $CCACHE_CONFIG
-  echo "stats = false" >> $CCACHE_CONFIG
-  echo 'max_size = 20G' >> $CCACHE_CONFIG
-  echo "base_dir = $HOME" >> $CCACHE_CONFIG
-  echo "cache_dir = $HOME/ccache_data" >> $CCACHE_CONFIG
-  echo "hash_dir = false" >> $CCACHE_CONFIG
+mkdir -p $CCACHE_DIR
+CCACHE_CONFIGPATH=$CCACHE_DIR/ccache.conf
+if ! test -f $CCACHE_CONFIGPATH; then
+  echo 'compiler_check = none' >> $CCACHE_CONFIGPATH
+  echo "stats = false" >> $CCACHE_CONFIGPATH
+  echo 'max_size = 20G' >> $CCACHE_CONFIGPATH
+  echo "base_dir = $SCRIPT_DIR/chromium/src/out/Default" >> $CCACHE_CONFIGPATH
+  echo "hash_dir = false" >> $CCACHE_CONFIGPATH
+  echo "sloppiness = time_macros" >> $CCACHE_CONFIGPATH
 fi
 
 mkdir -p $chromium_srcdir/out/Default
@@ -388,6 +388,7 @@ cd $chromium_srcdir
 export CCACHE_CPP2=yes
 export CCACHE_BASEDIR=$(pwd)
 export CCACHE_SLOPPINESS=time_macros
+export CCACHE_DIR=${SCRIPT_DIR}/ccache
 autoninja -C out/Default chrome_public_apk
 ```
 
@@ -445,93 +446,6 @@ cr reset
 cr apply_vanadium_patches
 cr patch
 cr configure
-cr build
-```
-
-## cache
-
-### cache_store
-
-```sh
-eval "$(cr -c common)"
-cd $chromium_srcdir
-if ! git diff --staged --quiet; then
-  git add -A
-  git commit -m titanium
-  git switch -c titanium
-fi
-
-git --git-dir=$chromium_srcdir/.git bundle create /tmp/chromium.bundle HEAD
-tar -C $chromium_srcdir/v8 -c .git | zstd -T0 -v > /tmp/v8.tar.zst
-tar -C $chromium_srcdir/third_party/search_engines_data/resources -c .git | zstd -T0 -v > /tmp/search_engines_data_resource.tar.zst
-tar -C $chromium_srcdir -c out | zstd -T0 > /tmp/chromium-obj.tar.zst
-
-du -ahd0 /tmp/chromium.bundle /tmp/v8.tar.zst /tmp/search_engines_data_resource.tar.zst /tmp/chromium-obj.tar.zst
-```
-
-### cache_restore
-
-```sh
-tmp_chromium_dir=chromium_new/src
-if ! test -d $tmp_chromium_dir; then
-  mkdir -p /tmp/chromium
-  git clone /tmp/chromium.bundle $tmp_chromium_dir
-fi
-# cd $tmp_chromium_dir
-# git config -f $tmp_chromium_dir/.gitmodules submodule
-zstd -d -T0 -v </tmp/v8.tar.zst | tar -C $tmp_chromium_dir/v8 -x
-cd $tmp_chromium_dir/v8
-git restore .
-
-zstd -d -T0 -v </tmp/search_engines_data_resource.tar.zst | tar -C $tmp_chromium_dir/third_party/search_engines_data/resources -x
-cd $tmp_chromium_dir/third_party/search_engines_data/resources
-git restore .
-
-git --git-dir=$tmp_chromium_dir/.git log --oneline | head -n1
-git --git-dir=$tmp_chromium_dir/v8/.git log --oneline | head -n1
-git --git-dir=$tmp_chromium_dir/third_party/search_engines_data/resources/.git log --oneline | head -n1
-
-tar -C $tmp_chromium_dir -xf /tmp/chromium-obj.tar.zst
-```
-
-### cache_rebuild
-
-```sh
-export chromium_srcdir=chromium_new/src
-eval "$(cr -c common)"
-
-cr get:build_tools
-cr get:depot_tools
-
-cr sync_and_run_hooks
-cr build
-```
-
-### demo
-
-```sh
-cr clean
-(cd chromium/src && git submodule foreach --quiet 'echo "./$sm_path"' > /tmp/list)
-# tar -C chromium/src -cv --exclude-from=/tmp/list ./.git ./v8 ./third_party/search_engines_data/resources | zstd -T0 -v > /tmp/data
-# du -ahd0 /tmp/data
-
-export chromium_srcdir=chromium_new/src
-eval "$(cr -c common)"
-which -a gn
-
-rm -rf chromium_new
-mkdir -p chromium_new/src
-tar -C chromium/src -cv ./.git ./v8 ./third_party/search_engines_data/resources | tar -C chromium_new/src -x
-(cd chromium_new/src && git restore .)
-
-cr get:build_tools
-cr get:depot_tools
-
-echo ----------run hooks----------
-cr sync_and_run_hooks
-echo --------------configure--------
-cr configure
-echo --------------build----------
 cr build
 ```
 
