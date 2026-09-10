@@ -26,7 +26,7 @@ jobs:
       timoutExitStatus: ${{ steps.build.outputs.timoutExitStatus }}
       cacheKey: ${{ steps.generate-cacheKey.outputs.cacheKey }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           submodules: true
 
@@ -321,6 +321,18 @@ jobs:
         if: steps.restore-data.outputs.cache-matched-key == ''
         working-directory: chromium/src
         run: |
+          # Generate ccache config
+          mkdir -p $HOME/.ccache/
+          CCACHE_CONFIG=$HOME/.ccache/ccache.conf
+          if ! test -f $CCACHE_CONFIG; then
+            echo 'compiler_check = none' >> $CCACHE_CONFIG
+            echo "stats = false" >> $CCACHE_CONFIG
+            echo 'max_size = 20G' >> $CCACHE_CONFIG
+            echo "base_dir = $HOME" >> $CCACHE_CONFIG
+            echo "cache_dir = $HOME/ccache_data" >> $CCACHE_CONFIG
+            echo "hash_dir = false" >> $CCACHE_CONFIG
+          fi
+
           mkdir -p ${{ github.workspace }}/chromium/src/out/Default
           mkdir -p ${{ github.workspace }}/chromium/src/out/tmp
           mkdir -p ${{ github.workspace }}/chromium/src/out/release
@@ -328,11 +340,17 @@ jobs:
           sed -i 's/target_cpu = "arm"/target_cpu = "arm64"/' out/Default/args.gn
           sed -i 's/io.github.jqssun.helium/com.android.desktopchromium/g' out/Default/args.gn
           gn gen out/Default # gn args out/Default; echo 'treat_warnings_as_errors = false' >> out/Default/args.gn
+          echo >> out/Default/args.gn
+          echo 'cc_wrapper = "ccache"' >> out/Default/args.gn
 
       - name: Build
         id: build
         working-directory: chromium/src
         run: |
+          export CCACHE_CPP2=yes
+          export CCACHE_BASEDIR=$(pwd)
+          export CCACHE_SLOPPINESS=time_macros
+
           if timeout ${{  inputs.timeout || 300 }}m autoninja -C out/Default chrome_public_apk; then
             timoutExitStatus=$?
             echo timoutExitStatus=$timoutExitStatus >> $GITHUB_OUTPUT
@@ -423,3 +441,13 @@ jobs:
         with:
           subject-path: |
             ${{ env.chromium_version }}-${{ env.timestamp }}-arm64-v8a.apk
+
+  rebuild:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: ./.github/workflows/cached_build
+        with:
+          ttyd-credential: ${{ inputs.ttyd-credential }}
+          timeout: ${{ inputs.timeout }}
+
+
