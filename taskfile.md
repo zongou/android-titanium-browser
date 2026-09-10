@@ -76,10 +76,11 @@ install dependencies
 ```sh
 export DEBIAN_FRONTEND=noninteractive
 sudo apt-get update
-sudo apt-get install -y sudo lsb-release file nano git curl python3 python3-pillow imagemagick librsvg2-bin
-sudo dpkg --add-architecture i386
-sudo apt-get update
-sudo apt-get install -y libgcc-s1:i386
+sudo apt-get install -y sudo lsb-release file nano git curl python3 python3-pillow imagemagick librsvg2-bin ccache
+
+# sudo dpkg --add-architecture i386
+# sudo apt-get update
+# sudo apt-get install -y libgcc-s1:i386
 ```
 
 ### get:depot_tools
@@ -352,6 +353,19 @@ configure target and output dir
 
 ```sh
 eval "$(cr -c common)"
+echo "--------------- $chromium_srcdir"
+# Generate ccache config
+mkdir -p $HOME/.ccache/
+CCACHE_CONFIG=$HOME/.ccache/ccache.conf
+if ! test -f $CCACHE_CONFIG; then
+  echo 'compiler_check = none' >> $CCACHE_CONFIG
+  echo "stats = false" >> $CCACHE_CONFIG
+  echo 'max_size = 20G' >> $CCACHE_CONFIG
+  echo "base_dir = $HOME" >> $CCACHE_CONFIG
+  echo "cache_dir = $HOME/ccache_data" >> $CCACHE_CONFIG
+  echo "hash_dir = false" >> $CCACHE_CONFIG
+fi
+
 mkdir -p $chromium_srcdir/out/Default
 mkdir -p $chromium_srcdir/out/tmp
 mkdir -p $chromium_srcdir/out/release
@@ -359,6 +373,9 @@ cp $SCRIPT_DIR/args.gn $chromium_srcdir/out/Default/args.gn
 cd $chromium_srcdir
 sed -i 's/target_cpu = "arm"/target_cpu = "arm64"/' out/Default/args.gn
 sed -i 's/io.github.jqssun.helium/com.android.desktopchromium/g' out/Default/args.gn
+echo >> out/Default/args.gn
+# echo "use_ccache = true" >> out/Default/args.gn
+echo "cc_wrapper = \"env CCACHE_SLOPPINESS=time_macros ccache\"" >> out/Default/args.gn
 gn gen out/Default # gn args out/Default; echo 'treat_warnings_as_errors = false' >> out/Default/args.gn
 ```
 
@@ -446,94 +463,6 @@ eval "$(cr -c common)"
 $@
 ```
 
-### setup_vscode
-
-```sh
-code --install-extension esbenp.prettier-vscode
-code --install-extension zongou.simple-runner
-```
-
-### get:cr
-
-```sh
-cd /tmp
-if ! test -d cr; then
-  git clone https://github.com/zongou/cr
-fi
-cd cr
-cargo run build:release
-cargo run install
-```
-
-### get:fresh
-
-```sh
-VERSION=$(curl -s -S "https://api.github.com/repos/sinelaw/fresh/releases" | jq -r .[0].tag_name)
-echo "Downloading fresh-editor ${VERSION}"
-ARCH=$(uname -m)
-URL=https://github.com/sinelaw/fresh/releases/download/v0.4.6/fresh-editor-${ARCH}-unknown-linux-musl.tar.gz
-curl -L ${URL} | gzip -d | tar -C /usr/local/bin --strip-components=1 -x --wildcards "*/fresh"
-fresh --version
-```
-
-### get:helix
-
-```sh
-VERSION=$(curl -s -S https://api.github.com/repos/helix-editor/helix/releases | jq -r .[0].tag_name)
-echo "Downloading helix editor ${VERSION}"
-ARCH=$(uname -m)
-URL=https://github.com/helix-editor/helix/releases/download/${VERSION}/helix-${VERSION}-${ARCH}-linux.tar.xz
-curl -L ${URL} | xz -d | tar -C /usr/local/bin --strip-components=1 -x --wildcards "*/hx"
-ln -snf /opt/helix-${VERSION}-${ARCH}-linux/hx /usr/local/bin/hx
-hx --version
-```
-
-### get:dufs
-
-```sh
-VERSION=$(curl -s -S https://api.github.com/repos/sigoden/dufs/releases | jq -r .[0].tag_name)
-echo "Downloading dufs ${VERSION}"
-ARCH=$(uname -m)
-URL=https://github.com/sigoden/dufs/releases/download/${VERSION}/dufs-${VERSION}-${ARCH}-unknown-linux-musl.tar.gz
-curl -L ${URL} | gzip -d | tar -C /usr/local/bin -x
-dufs --version
-```
-
-### get:trzsz
-
-```sh
-VERSION=$(curl -s -S https://api.github.com/repos/ruanimal/trzsz-rs/releases | jq -r .[0].tag_name)
-echo "Downloading trzsz ${VERSION}"
-ARCH=$(uname -m)
-URL=https://github.com/ruanimal/trzsz-rs/releases/download/${VERSION}/trzsz-${VERSION}-${ARCH}-unknown-linux-musl.tar.gz
-curl -LkSs "${URL}" | gzip -d | tar -C /usr/local/bin -x
-trzsz --version
-```
-
-### get:ttyd
-
-```sh
-VERSION=$(curl -s -S https://api.github.com/repos/zongou/ttyd/releases | jq -r .[0].tag_name)
-echo "Downloading ttyd ${VERSION}"
-ARCH=$(uname -m)
-URL=https://github.com/zongou/ttyd/releases/download/${VERSION}/ttyd.${ARCH}
-curl -LkSs "${URL}" > ttyd
-chmod +x ttyd
-sudo mv ttyd /usr/local/bin
-ttyd --version
-```
-
-### get:cloudflared
-
-```sh
-VERSION=$(curl -s -S https://api.github.com/repos/cloudflare/cloudflared/releases | jq -r .[0].tag_name)
-echo "Downloading cloudflared ${VERSION}"
-URL=https://github.com/cloudflare/cloudflared/releases/download/${VERSION}/cloudflared-linux-amd64
-curl -LkSs "${URL}" > cloudflared
-chmod +x cloudflared
-sudo mv cloudflared /usr/local/bin
-cloudflared --version
-```
 
 ### rework
 
@@ -624,19 +553,38 @@ cr build
 ### demo
 
 ```sh
-(cd chromium/src && git submodule foreach --quiet 'echo "$sm_path"' > /tmp/submodules)
-tar -C chromium/src -cv --exclude-from=/tmp/submodules ./ chromium/src/v8 chromium/src/third_party/search_engines_data/resources | zstd -T0 -v > /tmp/data
-du -ahd0 /tmp/data
+(cd chromium/src && git submodule foreach --quiet 'echo "./$sm_path"' > /tmp/list)
+# tar -C chromium/src -cv --exclude-from=/tmp/list ./.git ./v8 ./third_party/search_engines_data/resources | zstd -T0 -v > /tmp/data
+# du -ahd0 /tmp/data
 
 export chromium_srcdir=chromium_new/src
 eval "$(cr -c common)"
-rm -rf chromium_new
-mkdir -p chromium_new/src
-zstd -T0 -d < /tmp/data | tar -C chromium_new/src -x
+which -a gn
+
+# rm -rf chromium_new
+# mkdir -p chromium_new/src
+# tar -C chromium/src -cv ./.git ./v8 ./third_party/search_engines_data/resources | tar -C chromium_new/src -x
+# (cd chromium_new/src && git restore .)
 
 cr get:build_tools
 cr get:depot_tools
 
+echo ----------run hooks----------
 cr sync_and_run_hooks
+echo --------------build----------
 cr build
+```
+
+## stat
+```sh
+ccache -s
+```
+
+## clean
+```sh
+sudo rm -rf /usr/share/dotnet
+sudo rm -rf /usr/local/lib/android
+sudo rm -rf /opt/ghc
+sudo swapoff -a
+sudo rm -f /mnt/swapfile
 ```
