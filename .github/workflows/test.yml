@@ -30,10 +30,14 @@ jobs:
         with:
           submodules: true
 
+      - name: Install herdr
+        run: curl -fsSL https://herdr.dev/install.sh | sh
+
       - uses: zongou/run-ttyd-server@main
         name: Run ttyd server
         with:
           credential: ${{ inputs.ttyd-credential || secrets.TTYD_CREDENTIAL }}
+          command: herdr
 
       - uses: zongou/run-vscode-server@main
         name: Run vscode server
