@@ -336,7 +336,7 @@ sed -i '/for (int i = 0; i < tab_list->GetTabCount(); ++i) {/i if (!tab_list) { 
 # crbug.com/40274462: incognito uaf
 sed -i '/CONTENT_EXPORT static WebContents\* FromRenderFrameHost(RenderFrameHost\* rfh);/a\CONTENT_EXPORT static bool HasLiveWebContentsForBrowserContext(BrowserContext* browser_context);' content/public/browser/web_contents.h
 sed -i '/^WebContentsImpl::WebContentsImpl(BrowserContext\* browser_context)/i\ bool WebContents::HasLiveWebContentsForBrowserContext(BrowserContext* browser_context) { for (WebContentsImpl* web_contents : WebContentsImpl::GetAllWebContents()) { if (web_contents->GetBrowserContext() == browser_context) { return true; } } return false; }' content/browser/web_contents/web_contents_impl.cc
-sed -i '/#include "content\/public\z/browser\/render_process_host.h"/a#include "content/public/browser/web_contents.h"' chrome/browser/profiles/profile_destroyer.cc
+sed -i '/#include "content\/public\/browser\/render_process_host.h"/a#include "content/public/browser/web_contents.h"' chrome/browser/profiles/profile_destroyer.cc
 sed -i '/^void ProfileDestroyer::DestroyOTRProfileWhenAppropriateWithTimeout($/,/MaybeSendDestroyedNotification/{/  profile->MaybeSendDestroyedNotification();/i\
 if (content::WebContents::HasLiveWebContentsForBrowserContext(profile)) { return; }
 }' chrome/browser/profiles/profile_destroyer.cc
@@ -359,7 +359,7 @@ mkdir -p $CCACHE_DIR
 CCACHE_CONFIGPATH=$CCACHE_DIR/ccache.conf
 if ! test -f $CCACHE_CONFIGPATH; then
   echo 'compiler_check = none' >> $CCACHE_CONFIGPATH
-  # echo "stats = false" >> $CCACHE_CONFIGPATH
+  echo "stats = false" >> $CCACHE_CONFIGPATH
   echo 'max_size = 20G' >> $CCACHE_CONFIGPATH
   echo "base_dir = $SCRIPT_DIR" >> $CCACHE_CONFIGPATH
   echo "hash_dir = false" >> $CCACHE_CONFIGPATH
@@ -463,14 +463,14 @@ cr clean
 # tar -C chromium/src -cv --exclude-from=/tmp/list ./.git ./v8 ./third_party/search_engines_data/resources | zstd -T0 -v > /tmp/data
 # du -ahd0 /tmp/data
 
-export chromium_srcdir=chromium_new/src
+export chromium_srcdir=chromium/src_new
 eval "$(cr -c common)"
 which -a gn
 
 rm -rf chromium/src_new
 mkdir -p chromium/src_new
 tar -C chromium/src -cv ./.git ./v8 ./third_party/search_engines_data/resources | tar -C chromium/src_new -x
-(cd chromium/src_new && git restore .)
+(cd chromium_new/src && git restore .)
 
 cr get:build_tools
 cr get:depot_tools
