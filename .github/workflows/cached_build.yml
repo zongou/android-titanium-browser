@@ -78,6 +78,8 @@ jobs:
           path: |
             chromium/ccache
           key: ccache-${{ env.chromium_version }}-
+          restore-keys: |
+            ccache-${{ env.chromium_version }}-
 
       - name: Install dependencies
         run: |
