@@ -25,6 +25,8 @@ jobs:
     outputs:
       timoutExitStatus: ${{ steps.build.outputs.timoutExitStatus }}
       cacheKey: ${{ steps.generate-cacheKey.outputs.cacheKey }}
+    env:
+      CCACHE_DIR: "${{ github.workspace }}/chromium/ccache"
     steps:
       - uses: actions/checkout@v7
         with:
@@ -70,30 +72,25 @@ jobs:
           swap-storage: true
 
       - name: Restore data
-        if: inputs.restore-data == 'true'
         id: restore-data
         uses: actions/cache/restore@v6
         with:
           path: |
-            vanadium
-            depot_tools
-            chromium
-          key: data-${{ env.chromium_version }}-
+            chromium/ccache
+          key: ccache-${{ env.chromium_version }}-
 
       - name: Install dependencies
         run: |
           export DEBIAN_FRONTEND=noninteractive
           sudo apt-get update
-          sudo apt-get install -y sudo lsb-release file nano git curl python3 python3-pillow imagemagick librsvg2-bin
+          sudo apt-get install -y sudo lsb-release file nano git curl python3 python3-pillow imagemagick librsvg2-bin ccache
           sudo dpkg --add-architecture i386; sudo apt-get update; sudo apt-get install -y libgcc-s1:i386
 
       - name: Get depot_tools
-        if: steps.restore-data.outputs.cache-matched-key == ''
         run: |
           git clone --depth 1 https://chromium.googlesource.com/chromium/tools/depot_tools.git
 
       - name: Get chromium source ${{ env.chromium_version }}
-        if: steps.restore-data.outputs.cache-matched-key == ''
         env:
           CHROMIUM_SOURCE: https://github.com/chromium/chromium.git
           # CHROMIUM_SOURCE: https://chromium.googlesource.com/chromium/src.git
@@ -105,7 +102,6 @@ jobs:
           git checkout $chromium_version
 
       - name: Apply vanadium patches
-        if: steps.restore-data.outputs.cache-matched-key == ''
         working-directory: chromium/src
         run: |
           # https://grapheneos.org/build#browser-and-webview
@@ -318,19 +314,18 @@ jobs:
           export PATCHED=1
 
       - name: Configure
-        if: steps.restore-data.outputs.cache-matched-key == ''
         working-directory: chromium/src
         run: |
           # Generate ccache config
-          mkdir -p $HOME/.ccache/
-          CCACHE_CONFIG=$HOME/.ccache/ccache.conf
-          if ! test -f $CCACHE_CONFIG; then
-            echo 'compiler_check = none' >> $CCACHE_CONFIG
-            echo "stats = false" >> $CCACHE_CONFIG
-            echo 'max_size = 20G' >> $CCACHE_CONFIG
-            echo "base_dir = $HOME" >> $CCACHE_CONFIG
-            echo "cache_dir = $HOME/ccache_data" >> $CCACHE_CONFIG
-            echo "hash_dir = false" >> $CCACHE_CONFIG
+          mkdir -p $CCACHE_DIR
+          CCACHE_CONFIGPATH=$CCACHE_DIR/ccache.conf
+          if ! test -f $CCACHE_CONFIGPATH; then
+            echo 'compiler_check = none' >> $CCACHE_CONFIGPATH
+            echo "stats = false" >> $CCACHE_CONFIGPATH
+            echo 'max_size = 20G' >> $CCACHE_CONFIGPATH
+            echo "base_dir = $SCRIPT_DIR/chromium/src/out/Default" >> $CCACHE_CONFIGPATH
+            echo "hash_dir = false" >> $CCACHE_CONFIGPATH
+            echo "sloppiness = time_macros" >> $CCACHE_CONFIGPATH
           fi
 
           mkdir -p ${{ github.workspace }}/chromium/src/out/Default
@@ -347,10 +342,6 @@ jobs:
         id: build
         working-directory: chromium/src
         run: |
-          export CCACHE_CPP2=yes
-          export CCACHE_BASEDIR=$(pwd)
-          export CCACHE_SLOPPINESS=time_macros
-
           if timeout ${{  inputs.timeout || 300 }}m autoninja -C out/Default chrome_public_apk; then
             timoutExitStatus=$?
             echo timoutExitStatus=$timoutExitStatus >> $GITHUB_OUTPUT
@@ -380,13 +371,11 @@ jobs:
           echo cacheKey=data-${{ env.chromium_version }}-${{ env.timestamp }} >> $GITHUB_OUTPUT
 
       - name: Store data
-        # if: steps.build.outputs.timoutExitStatus == 124
+        if: always()
         uses: actions/cache/save@v6
         with:
           path: |
-            vanadium
-            depot_tools
-            chromium
+            chromium/ccache
           key: ${{ steps.generate-cacheKey.outputs.cacheKey }}
 
       # - name: Set sign keys
