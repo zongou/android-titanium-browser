@@ -79,7 +79,7 @@ jobs:
             chromium/ccache
           key: ccache-${{ env.chromium_version }}-
           restore-keys: |
-            ccache-${{ env.chromium_version }}-
+            data-${{ env.chromium_version }}-
 
       - name: Install dependencies
         run: |
@@ -370,7 +370,7 @@ jobs:
       - name: generate cache key
         id: generate-cacheKey
         run: |
-          echo cacheKey=data-${{ env.chromium_version }}-${{ env.timestamp }} >> $GITHUB_OUTPUT
+          echo cacheKey=ccache-${{ env.chromium_version }}-${{ env.timestamp }} >> $GITHUB_OUTPUT
 
       - name: Store data
         if: always()
