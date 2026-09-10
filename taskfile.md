@@ -361,7 +361,7 @@ if ! test -f $CCACHE_CONFIGPATH; then
   echo 'compiler_check = none' >> $CCACHE_CONFIGPATH
   echo "stats = false" >> $CCACHE_CONFIGPATH
   echo 'max_size = 20G' >> $CCACHE_CONFIGPATH
-  echo "base_dir = $SCRIPT_DIR/chromium/src/out/Default" >> $CCACHE_CONFIGPATH
+  echo "base_dir = $SCRIPT_DIR" >> $CCACHE_CONFIGPATH
   echo "hash_dir = false" >> $CCACHE_CONFIGPATH
   echo "sloppiness = time_macros" >> $CCACHE_CONFIGPATH
 fi
@@ -385,10 +385,6 @@ autoninja build target
 ```sh
 eval "$(cr -c common)"
 cd $chromium_srcdir
-export CCACHE_CPP2=yes
-export CCACHE_BASEDIR=$(pwd)
-export CCACHE_SLOPPINESS=time_macros
-export CCACHE_DIR=${SCRIPT_DIR}/ccache
 autoninja -C out/Default chrome_public_apk
 ```
 
