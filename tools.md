@@ -88,3 +88,44 @@ chmod +x cloudflared
 sudo mv cloudflared /usr/local/bin
 cloudflared --version
 ```
+
+### serve
+
+```sh
+CLOUDFLARED_LOG=/tmp/cloudflared.log
+nohup cloudflared tunnel --url localhost:5000 >${CLOUDFLARED_LOG} 2>&1 &
+while true; do
+  if cat "${CLOUDFLARED_LOG}" | grep -Eo "https://.+\.trycloudflare\.com"; then
+    break
+  fi
+  sleep 1
+done
+if ! command -v dufs >/dev/null 2>&1; then
+  # cargo install dufs
+  (
+    cd /tmp
+    wget https://github.com/sigoden/dufs/releases/download/v0.46.0/dufs-v0.46.0-x86_64-unknown-linux-musl.tar.gz
+    tar -xvf dufs-v0.46.0-x86_64-unknown-linux-musl.tar.gz
+    sudo install dufs /usr/local/bin/dufs
+  )
+fi
+nohup dufs --allow-all >/tmp/dufs.log 2>&1 &
+```
+
+
+### convert_patch
+
+````sh
+echo '#### patch:default'
+echo '```sh'
+cat patch.sh | sed -E 's/^#\!\/bin\/bash//' | sed -E '/^#[[:space:]]*sed/!s/^# (.*)/\n```\n#### patch:\1\n```sh/' | sed ':a;N;$!ba;s/\n\n```/```/g' |sed -E 's/(patch:\w+:) /\1/g'
+echo '```'
+````
+
+### update_task
+
+```sh
+git add taskfile.md tools.md
+git commit -m "update taskfile.md"
+git push
+```
