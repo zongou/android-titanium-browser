@@ -321,11 +321,12 @@ jobs:
           mkdir -p $CCACHE_DIR
           CCACHE_CONFIGPATH=$CCACHE_DIR/ccache.conf
           if ! test -f $CCACHE_CONFIGPATH; then
-            echo 'compiler_check = none' >> $CCACHE_CONFIGPATH
+            echo 'compiler_check = content' >> $CCACHE_CONFIGPATH
             echo "stats = false" >> $CCACHE_CONFIGPATH
             echo 'max_size = 20G' >> $CCACHE_CONFIGPATH
             echo "base_dir = ${{ github.workspace }}/chromium/src/out/Default" >> $CCACHE_CONFIGPATH
             echo "hash_dir = false" >> $CCACHE_CONFIGPATH
+            echo "fileclone = true" >> $CCACHE_CONFIGPATH
             echo "sloppiness = include_file_mtime" >> $CCACHE_CONFIGPATH
           fi
 
@@ -339,6 +340,10 @@ jobs:
           gn gen out/Default # gn args out/Default; echo 'treat_warnings_as_errors = false' >> out/Default/args.gn
           echo >> out/Default/args.gn
           echo 'cc_wrapper = "ccache"' >> out/Default/args.gn
+
+      - name: Show compiler cache stats
+        if: always()
+        run: ccache --show-stats || true
 
       - name: Build
         id: build
