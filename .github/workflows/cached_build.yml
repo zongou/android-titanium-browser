@@ -52,7 +52,8 @@ jobs:
           timestamp=$(date +%s)
           echo timestamp=${timestamp} >> $GITHUB_ENV
           echo "chromium_version=$(grep -m1 -o '[0-9]\+\(\.[0-9]\+\)\{3\}' vanadium/args.gn)" >> $GITHUB_ENV
-
+          echo "CC=ccache clang -Qunused-arguments" >> $GITHUB_ENV
+          echo "CXX=ccache clang++ -Qunused-arguments" >> $GITHUB_ENV
           echo "${{ github.workspace }}/depot_tools" >> $GITHUB_PATH
 
       # - name: Free Disk Space (Ubuntu)
