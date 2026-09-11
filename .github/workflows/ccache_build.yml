@@ -25,6 +25,7 @@ jobs:
          submodules: true
       - uses: ./.github/workflows/ccache_build
         with:
+          token: ${{ secrets.GITHUB_TOKEN }}
           timeout: ${{ inputs.timeout }}
 
   build1:
@@ -36,6 +37,7 @@ jobs:
          submodules: true
       - uses: ./.github/workflows/ccache_build
         with:
+          token: ${{ secrets.GITHUB_TOKEN }}
           timeout: ${{ inputs.timeout }}
 
   build2:
@@ -47,4 +49,5 @@ jobs:
          submodules: true
       - uses: ./.github/workflows/ccache_build
         with:
+          token: ${{ secrets.GITHUB_TOKEN }}
           timeout: ${{ inputs.timeout }}

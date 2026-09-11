@@ -2,6 +2,10 @@ name: Repeated Build
 description: "Build with ccache multiple times"
 
 inputs:
+  token:
+    description: "GitHub token"
+    required: true
+    type: string
   timeout:
     description: "Timeout in minutes"
     required: false
@@ -424,7 +428,7 @@ runs:
       if: steps.build.outputs.timoutExitStatus == 0
       uses: softprops/action-gh-release@v2
       with:
-        token: ${{ secrets.GITHUB_TOKEN }}
+        token: ${{ inputs.token }}
         name: v${{ env.chromium_version }}
         tag_name: v${{ env.chromium_version }}
         files: |
