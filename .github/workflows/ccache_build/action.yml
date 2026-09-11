@@ -16,9 +16,9 @@ runs:
   # env:
   #   CCACHE_DIR: "${{ github.workspace }}/chromium/ccache"
   steps:
-    - uses: actions/checkout@v7
-      with:
-          submodules: true
+    # - uses: actions/checkout@v7
+    #   with:
+    #       submodules: true
 
     - name: Update vanadium
       shell: bash
