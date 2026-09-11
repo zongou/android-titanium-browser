@@ -25,6 +25,7 @@ jobs:
           timeout: ${{ inputs.timeout }}
 
   build1:
+    needs: build0
     runs-on: ubuntu-latest
     steps:
       - uses: ./.github/workflows/ccache_build
@@ -32,6 +33,7 @@ jobs:
           timeout: ${{ inputs.timeout }}
 
   build2:
+    needs: build1
     runs-on: ubuntu-latest
     steps:
       - uses: ./.github/workflows/ccache_build
