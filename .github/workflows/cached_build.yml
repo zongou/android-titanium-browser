@@ -12,7 +12,7 @@ on:
         description: "Timeout in minutes"
         required: false
         type: number
-        default: 300
+        default: 330
 
 permissions:
   contents: write
@@ -55,21 +55,21 @@ jobs:
 
           echo "${{ github.workspace }}/depot_tools" >> $GITHUB_PATH
 
-      - name: Free Disk Space (Ubuntu)
-        uses: jlumbroso/free-disk-space@main
-        with:
-          # this might remove tools that are actually needed,
-          # if set to "true" but frees about 6 GB
-          tool-cache: false
+      # - name: Free Disk Space (Ubuntu)
+      #   uses: jlumbroso/free-disk-space@main
+      #   with:
+      #     # this might remove tools that are actually needed,
+      #     # if set to "true" but frees about 6 GB
+      #     tool-cache: false
 
-          # all of these default to true, but feel free to set to
-          # "false" if necessary for your workflow
-          android: false
-          dotnet: true
-          haskell: true
-          large-packages: true
-          docker-images: true
-          swap-storage: true
+      #     # all of these default to true, but feel free to set to
+      #     # "false" if necessary for your workflow
+      #     android: true
+      #     dotnet: true
+      #     haskell: true
+      #     large-packages: true
+      #     docker-images: true
+      #     swap-storage: true
 
       - name: Restore data
         id: restore-data
@@ -343,7 +343,7 @@ jobs:
         id: build
         working-directory: chromium/src
         run: |
-          if timeout ${{  inputs.timeout || 300 }}m autoninja -C out/Default chrome_public_apk; then
+          if timeout ${{  inputs.timeout || 330 }}m autoninja -C out/Default chrome_public_apk; then
             timoutExitStatus=$?
             echo timoutExitStatus=$timoutExitStatus >> $GITHUB_OUTPUT
             echo build finished
