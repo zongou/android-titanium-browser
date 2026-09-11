@@ -12,20 +12,13 @@ inputs:
     type: number
     default: 300
 
-
 outputs:
   timoutExitStatus: ${{ steps.build.outputs.timoutExitStatus }}
   cacheKey: ${{ steps.generate-cacheKey.outputs.cacheKey }}
 
 runs:
   using: composite
-  env:
-    CCACHE_DIR: "${{ github.workspace }}/chromium/ccache"
   steps:
-    # - uses: actions/checkout@v7
-    #   with:
-    #       submodules: true
-
     - name: Update vanadium
       shell: bash
       run: |
@@ -51,6 +44,7 @@ runs:
         echo "CC=ccache clang -Qunused-arguments" >> $GITHUB_ENV
         echo "CXX=ccache clang++ -Qunused-arguments" >> $GITHUB_ENV
         echo "${{ github.workspace }}/depot_tools" >> $GITHUB_PATH
+        echo "CCACHE_DIR="${{ github.workspace }}/chromium/ccache" >> $GITHUB_ENV
 
     # - name: Free Disk Space (Ubuntu)
     #   uses: jlumbroso/free-disk-space@main
