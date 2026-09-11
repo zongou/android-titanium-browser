@@ -27,8 +27,6 @@ jobs:
       cacheKey: ${{ steps.generate-cacheKey.outputs.cacheKey }}
     env:
       CCACHE_DIR: "${{ github.workspace }}/chromium/ccache"
-      CC: "ccache clang -Qunused-arguments"
-      CXX: "ccache clang++ -Qunused-arguments"
     steps:
       - uses: actions/checkout@v7
         with:
@@ -338,6 +336,7 @@ jobs:
           cp ${{ github.workspace }}/args.gn out/Default/args.gn
           sed -i 's/target_cpu = "arm"/target_cpu = "arm64"/' out/Default/args.gn
           sed -i 's/io.github.jqssun.helium/com.android.desktopchromium/g' out/Default/args.gn
+          sed -i 's/use_siso = true/use_siso = false/g' out/Default/args.gn
           gn gen out/Default # gn args out/Default; echo 'treat_warnings_as_errors = false' >> out/Default/args.gn
           echo >> out/Default/args.gn
           echo 'cc_wrapper = "ccache"' >> out/Default/args.gn

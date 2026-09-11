@@ -2,6 +2,8 @@
 
 debug first
 
+[build instruction](https://github.com/chromium/chromium/blob/main/docs/linux/build_instructions.md)
+
 ## work
 
 fresh setup all and build
@@ -373,6 +375,7 @@ cp $SCRIPT_DIR/args.gn $chromium_srcdir/out/Default/args.gn
 cd $chromium_srcdir
 sed -i 's/target_cpu = "arm"/target_cpu = "arm64"/' out/Default/args.gn
 sed -i 's/io.github.jqssun.helium/com.android.desktopchromium/g' out/Default/args.gn
+sed -i 's/use_siso = true/use_siso = false/g' out/Default/args.gn
 gn gen out/Default # gn args out/Default; echo 'treat_warnings_as_errors = false' >> out/Default/args.gn
 echo >> out/Default/args.gn
 echo 'cc_wrapper = "ccache"' >> out/Default/args.gn
@@ -389,7 +392,6 @@ autoninja -C out/Default chrome_public_apk
 ```
 
 ## others
-
 
 ### reset
 
@@ -433,7 +435,6 @@ $apksigner sign -verbose -ks testkey_untrusted.jks \
 eval "$(cr -c common)"
 $@
 ```
-
 
 ### rework
 
