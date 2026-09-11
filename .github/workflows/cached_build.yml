@@ -326,7 +326,7 @@ jobs:
             echo 'max_size = 20G' >> $CCACHE_CONFIGPATH
             echo "base_dir = ${{ github.workspace }}/chromium/src/out/Default" >> $CCACHE_CONFIGPATH
             echo "hash_dir = false" >> $CCACHE_CONFIGPATH
-            echo "sloppiness = time_macros" >> $CCACHE_CONFIGPATH
+            echo "sloppiness = include_file_mtime" >> $CCACHE_CONFIGPATH
           fi
 
           mkdir -p ${{ github.workspace }}/chromium/src/out/Default
