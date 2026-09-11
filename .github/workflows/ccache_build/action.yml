@@ -14,11 +14,11 @@ inputs:
 
 runs:
   using: composite
-  # outputs:
-  # timoutExitStatus: ${{ steps.build.outputs.timoutExitStatus }}
-  # cacheKey: ${{ steps.generate-cacheKey.outputs.cacheKey }}
-  # env:
-  #   CCACHE_DIR: "${{ github.workspace }}/chromium/ccache"
+  outputs:
+    timoutExitStatus: ${{ steps.build.outputs.timoutExitStatus }}
+    cacheKey: ${{ steps.generate-cacheKey.outputs.cacheKey }}
+  env:
+    CCACHE_DIR: "${{ github.workspace }}/chromium/ccache"
   steps:
     # - uses: actions/checkout@v7
     #   with:
