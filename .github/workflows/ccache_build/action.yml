@@ -12,13 +12,18 @@ inputs:
     type: number
     default: 300
 
-outputs:
-  timoutExitStatus: ${{ steps.build.outputs.timoutExitStatus }}
-  cacheKey: ${{ steps.generate-cacheKey.outputs.cacheKey }}
-
 runs:
   using: composite
+  # outputs:
+  # timoutExitStatus: ${{ steps.build.outputs.timoutExitStatus }}
+  # cacheKey: ${{ steps.generate-cacheKey.outputs.cacheKey }}
+  # env:
+  #   CCACHE_DIR: "${{ github.workspace }}/chromium/ccache"
   steps:
+    # - uses: actions/checkout@v7
+    #   with:
+    #       submodules: true
+
     - name: Update vanadium
       shell: bash
       run: |
@@ -43,8 +48,8 @@ runs:
         echo "chromium_version=$(grep -m1 -o '[0-9]\+\(\.[0-9]\+\)\{3\}' vanadium/args.gn)" >> $GITHUB_ENV
         echo "CC=ccache clang -Qunused-arguments" >> $GITHUB_ENV
         echo "CXX=ccache clang++ -Qunused-arguments" >> $GITHUB_ENV
+        echo "CCACHE_DIR=${{ github.workspace }}/chromium/ccache" >> $GITHUB_ENV
         echo "${{ github.workspace }}/depot_tools" >> $GITHUB_PATH
-        echo "CCACHE_DIR="${{ github.workspace }}/chromium/ccache" >> $GITHUB_ENV
 
     # - name: Free Disk Space (Ubuntu)
     #   uses: jlumbroso/free-disk-space@main
