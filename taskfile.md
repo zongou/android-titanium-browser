@@ -3,6 +3,7 @@
 debug first
 
 [build instruction](https://github.com/chromium/chromium/blob/main/docs/linux/build_instructions.md)
+[ccache mannual](https://ccache.dev/manual/4.14.html#_configuration_value_syntax)
 
 ## work
 
