@@ -27,6 +27,8 @@ jobs:
       cacheKey: ${{ steps.generate-cacheKey.outputs.cacheKey }}
     env:
       CCACHE_DIR: "${{ github.workspace }}/chromium/ccache"
+      CC: "ccache clang -Qunused-arguments"
+      CXX: "ccache clang++ -Qunused-arguments"
     steps:
       - uses: actions/checkout@v7
         with:
