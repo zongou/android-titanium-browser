@@ -1,0 +1,39 @@
+name: Cached Build
+
+on:
+  push:
+    paths: .github/workflows/cached_build.yml
+  workflow_dispatch:
+    inputs:
+      timeout:
+        description: "Timeout in minutes"
+        required: false
+        type: number
+        default: 350
+
+permissions:
+  contents: write
+  id-token: write
+  attestations: write
+
+jobs:
+  build0:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: ./.github/workflows/cached_build.yml
+        with:
+          timeout: ${{ inputs.timeout }}
+
+  build1:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: ./.github/workflows/cached_build.yml
+        with:
+          timeout: ${{ inputs.timeout }}
+
+  build2:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: ./.github/workflows/cached_build.yml
+        with:
+          timeout: ${{ inputs.timeout }}
