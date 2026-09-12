@@ -78,6 +78,7 @@ jobs:
         with:
           path: |
             chromium/ccache
+            chromium/src/out
           key: ccache-${{ env.chromium_version }}-
 
       - name: Install dependencies
@@ -361,6 +362,10 @@ jobs:
 
           echo timoutExitStatus=$timoutExitStatus
 
+      - name: Show compiler cache stats
+        if: always()
+        run: ccache --show-stats || true
+
       - name: Build not finished
         if: steps.build.outputs.timoutExitStatus == 124
         run: echo build not finished
@@ -383,6 +388,7 @@ jobs:
         with:
           path: |
             chromium/ccache
+            chromium/src/out
           key: ${{ steps.generate-cacheKey.outputs.cacheKey }}
 
       # - name: Set sign keys
