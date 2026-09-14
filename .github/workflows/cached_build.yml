@@ -67,6 +67,7 @@ jobs:
           echo "CCACHE_BASEDIR=$GITHUB_WORKSPACE" >> "$GITHUB_ENV"
           echo "CCACHE_COMPILERCHECK=content" >> "$GITHUB_ENV"
           echo "CCACHE_NOHASHDIR=true" >> "$GITHUB_ENV"
+          echo "CCACHE_SLOPPINESS=file_stat_matches,include_file_ctime,include_file_mtime,time_macros" >> "$GITHUB_ENV"
           ccache --set-config=max_size="10G"
           ccache --set-config=compression=true
           ccache --zero-stats || true
