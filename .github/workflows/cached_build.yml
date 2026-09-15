@@ -345,8 +345,8 @@ jobs:
           mkdir -p ${{ github.workspace }}/chromium/src/out/Default
           mkdir -p ${{ github.workspace }}/chromium/src/out/tmp
           mkdir -p ${{ github.workspace }}/chromium/src/out/release
-          # cp ${{ github.workspace }}/args.gn out/Default/args.gn
-          curl -L https://github.com/dandelions/android-titanium-browser/raw/refs/heads/main/args.gn > out/Default/args.gn
+          cp ${{ github.workspace }}/args.gn out/Default/args.gn
+          # curl -L https://github.com/dandelions/android-titanium-browser/raw/refs/heads/main/args.gn > out/Default/args.gn
           sed -i 's/target_cpu = "arm"/target_cpu = "arm64"/' out/Default/args.gn
           sed -i 's/io.github.jqssun.helium/com.android.desktopchromium/g' out/Default/args.gn
           sed -i 's/use_siso = true/use_siso = false/g' out/Default/args.gn
@@ -359,6 +359,7 @@ jobs:
         run: ccache --show-stats || true
 
       - name: Build
+        if: steps.restore-data.outputs.cache-hit != 'true'
         id: build
         working-directory: chromium/src
         run: |
