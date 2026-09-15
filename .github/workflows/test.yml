@@ -43,7 +43,7 @@ jobs:
         name: Run vscode server
         with:
           token: ${{ inputs.vscode-server-token || secrets.VSCODE_SERVER_TOKEN }}
-          cacheData: true
+          enableCache: true
 
       - name: Free Disk Space (Ubuntu)
         uses: jlumbroso/free-disk-space@main
