@@ -9,7 +9,7 @@ on:
         description: "vscode server token"
         required: false
       ttyd-credential:
-        description: "ttyd credential"
+        description: "ttyd user:pass"
         required: false
       restore-data:
         description: "restore data"
