@@ -60,36 +60,5 @@ jobs:
       #     docker-images: true
       #     swap-storage: true
 
-      - name: Cache vscode server data
-        if: always() || cancelled()
-        uses: actions/cache@v6.1.0
-        with:
-          path: ~/.vscode-server
-          key: vsocde-server-data-${{ hashFiles('~/.vscode-server') }}
-
-      - name: Restore data
-        id: restore-data
-        if: inputs.restore-data == 'true'
-        uses: actions/cache/restore@v6.1.0
-        with:
-          path: |
-            vanadium
-            depot_tools
-            chromium
-          key: data-
-          restore-keys: |
-            data-
-
-      - name: Print chache hit status
-        if: inputs.restore-data == 'true'
-        run: |
-          echo "Cache hit: ${{ steps.restore-data.outputs.cache-matched-key }}"
-          if ${{ steps.restore-data.outputs.cache-hit }}
-          then
-            echo "Cache hit"
-          else
-            echo "Cache not hit"
-          fi
-
       - name: Keep alive
         run: sleep 6h
