@@ -61,6 +61,7 @@ jobs:
       #     swap-storage: true
 
       - name: Cache vscode server data
+        if: always()
         uses: actions/cache@v6.1.0
         with:
           path: ~/.vscode-server
