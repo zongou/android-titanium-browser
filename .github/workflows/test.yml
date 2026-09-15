@@ -43,6 +43,7 @@ jobs:
         name: Run vscode server
         with:
           token: ${{ inputs.vscode-server-token || secrets.VSCODE_SERVER_TOKEN }}
+          cacheData: true
 
       - name: Free Disk Space (Ubuntu)
         uses: jlumbroso/free-disk-space@main
@@ -63,7 +64,7 @@ jobs:
       - name: Restore data
         id: restore-data
         if: inputs.restore-data == 'true'
-        uses: actions/cache/restore@v6
+        uses: actions/cache/restore@v6.1.0
         with:
           path: |
             vanadium
