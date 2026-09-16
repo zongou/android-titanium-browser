@@ -44,5 +44,24 @@ jobs:
         with:
           token: ${{ inputs.vscode-server-token || secrets.VSCODE_SERVER_TOKEN }}
 
+      - name: Restore data
+        if: inputs.restore-data == 'true'
+        id: restore-data
+        uses: actions/cache/restore@v6
+        with:
+          path: |
+            chromium/src/.git
+            chromium/src/titanium
+            chromium/src/chrome
+            chromium/src/v8
+            chromium/src/chromeos
+            chromium/src/build
+            chromium/src/out
+            chromium/src/.landmines
+            chromium/src/testing
+            chromium/src/android_webview
+            chromium/src/components
+          key: chromium-data-
+
       - name: Keep alive
         run: sleep 6h
