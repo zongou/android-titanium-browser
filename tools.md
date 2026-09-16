@@ -129,3 +129,12 @@ git add taskfile.md tools.md
 git commit -m "update taskfile.md"
 git push
 ```
+
+### patch_vscode
+
+```sh
+cd /tmp
+git clone https://github.com/zongou/vscli
+cd vscli
+./vscli patch
+```

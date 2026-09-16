@@ -31,7 +31,6 @@ export SCRIPT_DIR=$(dirname $CR_FILE)
 export PATH=$SCRIPT_DIR/depot_tools:$PATH
 export chromium_version=$(grep -m1 -o '[0-9]\+\(\.[0-9]\+\)\{3\}' vanadium/args.gn)
 export chromium_srcdir=${chromium_srcdir-$SCRIPT_DIR/chromium/src}
-export CCACHE_DIR=$SCRIPT_DIR/chromium/ccache
 
 replace() {
   export org=$2 new=$3
@@ -80,7 +79,7 @@ install dependencies
 ```sh
 export DEBIAN_FRONTEND=noninteractive
 sudo apt-get update
-sudo apt-get install -y sudo lsb-release file nano git curl python3 python3-pillow imagemagick librsvg2-bin ccache
+sudo apt-get install -y sudo lsb-release file nano git curl python3 python3-pillow imagemagick librsvg2-bin
 
 # sudo dpkg --add-architecture i386
 # sudo apt-get update
@@ -356,19 +355,6 @@ export PATCHED=1
 configure target and output dir
 
 ```sh
-eval "$(cr -c common)"
-# Generate ccache config
-mkdir -p $CCACHE_DIR
-CCACHE_CONFIGPATH=$CCACHE_DIR/ccache.conf
-if ! test -f $CCACHE_CONFIGPATH; then
-  echo 'compiler_check = none' >> $CCACHE_CONFIGPATH
-  echo "stats = false" >> $CCACHE_CONFIGPATH
-  echo 'max_size = 20G' >> $CCACHE_CONFIGPATH
-  echo "base_dir = $SCRIPT_DIR" >> $CCACHE_CONFIGPATH
-  echo "hash_dir = false" >> $CCACHE_CONFIGPATH
-  echo "sloppiness = time_macros" >> $CCACHE_CONFIGPATH
-fi
-
 mkdir -p $chromium_srcdir/out/Default
 mkdir -p $chromium_srcdir/out/tmp
 mkdir -p $chromium_srcdir/out/release
@@ -376,10 +362,7 @@ cp $SCRIPT_DIR/args.gn $chromium_srcdir/out/Default/args.gn
 cd $chromium_srcdir
 sed -i 's/target_cpu = "arm"/target_cpu = "arm64"/' out/Default/args.gn
 sed -i 's/io.github.jqssun.helium/com.android.desktopchromium/g' out/Default/args.gn
-sed -i 's/use_siso = true/use_siso = false/g' out/Default/args.gn
 gn gen out/Default # gn args out/Default; echo 'treat_warnings_as_errors = false' >> out/Default/args.gn
-echo >> out/Default/args.gn
-echo 'cc_wrapper = "ccache"' >> out/Default/args.gn
 ```
 
 ### build
