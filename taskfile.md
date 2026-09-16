@@ -485,7 +485,7 @@ mkdir -p /tmp/build-chromium
 cd $SCRIPT_DIR/chromium/src
 cr -c changed_list | while IFS= read -r f; do
   if test -d $f; then
-    du -ad $f
+    du -d0 $f
   fi
 done
 ```
