@@ -104,14 +104,14 @@ update vanadium version
 cd vanadium
 git fetch --tags
 git checkout $(git tag | sort -V | tail -n1)
-# cd ..
-# git add vanadium
-# git config --global user.name 'github-actions[bot]'
-# git config --global user.email 'github-actions[bot]@users.noreply.github.com'
-# if ! git diff --staged --quiet; then
-#   git commit -am "update"
-#   git push
-# fi
+cd ..
+git add vanadium
+git config --global user.name 'github-actions[bot]'
+git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+if ! git diff --staged --quiet; then
+  git commit -am "update"
+  git push
+fi
 ```
 
 ### get:chromium_src
@@ -128,8 +128,8 @@ if ! test -d "$chromium_srcdir"; then
   git remote add origin $CHROMIUM_SOURCE
   git fetch --depth 1 $CHROMIUM_SOURCE +refs/tags/$chromium_version:chromium_$chromium_version
   git checkout $chromium_version
+  cr list_file_size > $SCRIPT_DIR/00_chromium_cloned.list
 fi
-echo get source done
 ```
 
 ### apply_vanadium_patches
@@ -155,6 +155,7 @@ replace "$SCRIPT_DIR/vanadium/patches" "vanadium" "titanium"
 git config --global user.name 'github-actions[bot]'
 git config --global user.email 'github-actions[bot]@users.noreply.github.com'
 git am --whitespace=nowarn --keep-non-patch $SCRIPT_DIR/vanadium/patches/*.patch
+cr list_file_size > $SCRIPT_DIR/01_vanadium_patched.list
 ```
 
 ### sync_and_run_hooks
@@ -168,8 +169,11 @@ eval "$(cr -c common)"
 cp $SCRIPT_DIR/.gclient $chromium_srcdir/../.gclient
 cd $chromium_srcdir
 gclient sync -D --no-history --nohooks
+cr list_file_size > $SCRIPT_DIR/02_gclient_synced.list
 gclient runhooks
+cr list_file_size > $SCRIPT_DIR/03_gclient_hooked.list
 ./build/install-build-deps.sh --no-prompt
+cr list_file_size > $SCRIPT_DIR/04_build_deps_installed.list
 ```
 
 ### patch
@@ -348,6 +352,7 @@ sed -i 's/|| mSupportedProfileType == SupportedProfileType.REGULAR) {/|| mSuppor
 sed -i 's/|| mSupportedProfileType == SupportedProfileType.OFF_THE_RECORD) {/|| mSupportedProfileType == SupportedProfileType.OFF_THE_RECORD || mSupportedProfileType == SupportedProfileType.MIXED) {/' chrome/android/java/src/org/chromium/chrome/browser/ChromeTabbedActivity.java
 
 export PATCHED=1
+cr list_file_size > $SCRIPT_DIR/05_titanium_patched.list
 ```
 
 ### configure
@@ -363,6 +368,7 @@ cd $chromium_srcdir
 sed -i 's/target_cpu = "arm"/target_cpu = "arm64"/' out/Default/args.gn
 sed -i 's/io.github.jqssun.helium/com.android.desktopchromium/g' out/Default/args.gn
 gn gen out/Default # gn args out/Default; echo 'treat_warnings_as_errors = false' >> out/Default/args.gn
+cr list_file_size > $SCRIPT_DIR/06_gn_gened.list
 ```
 
 ### build
@@ -466,4 +472,14 @@ echo --------------configure--------
 cr configure
 echo --------------build----------
 cr build
+```
+
+
+### list_file_size
+
+```sh
+eval "$(cr -c common)"
+mkdir -p /tmp/build-chromium
+cd $SCRIPT_DIR/chromium/src
+du -ad1
 ```
