@@ -361,6 +361,7 @@ cr list_file_size > $SCRIPT_DIR/05_titanium_patched.list
 configure target and output dir
 
 ```sh
+eval "$(cr -c common)"
 mkdir -p $chromium_srcdir/out/Default
 mkdir -p $chromium_srcdir/out/tmp
 mkdir -p $chromium_srcdir/out/release
@@ -379,7 +380,8 @@ autoninja build target
 ```sh
 eval "$(cr -c common)"
 cd $chromium_srcdir
-autoninja -C out/Default chrome_public_apk
+autoninja -C out/Default chrome_public_apk || true
+cr list_file_size > $SCRIPT_DIR/07_in_building.list
 ```
 
 ## others
@@ -482,5 +484,38 @@ cr build
 eval "$(cr -c common)"
 mkdir -p /tmp/build-chromium
 cd $SCRIPT_DIR/chromium/src
-du -ad1
+cr -c changed_list | while IFS= read -r f; do
+  if test -d $f; then
+    du -ad $f
+  fi
+done
+```
+
+### changed_list
+
+```
+./.git
+./net
+./services
+./titanium
+./tools
+./buildtools
+./chrome
+./sandbox
+./v8
+./chromeos
+./media
+./build
+./agents
+./third_party
+./out
+./content
+./docs
+./base
+./skia
+./.landmines
+./testing
+./android_webview
+./components
+./gpu
 ```
