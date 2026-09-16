@@ -26,7 +26,6 @@ jobs:
       timoutExitStatus: ${{ steps.build.outputs.timoutExitStatus }}
       cacheKey: ${{ steps.generate-cacheKey.outputs.cacheKey }}
     env:
-      CCACHE_DIR: "${{ github.workspace }}/chromium/ccache"
     steps:
       - uses: actions/checkout@v7
         with:
@@ -36,7 +35,7 @@ jobs:
         run: |
           export DEBIAN_FRONTEND=noninteractive
           sudo apt-get update
-          sudo apt-get install -y sudo lsb-release file nano git curl python3 python3-pillow imagemagick librsvg2-bin ccache
+          sudo apt-get install -y sudo lsb-release file nano git curl python3 python3-pillow imagemagick librsvg2-bin
           sudo dpkg --add-architecture i386; sudo apt-get update; sudo apt-get install -y libgcc-s1:i386
 
       - name: Update vanadium
@@ -61,49 +60,38 @@ jobs:
           echo "chromium_version=$(grep -m1 -o '[0-9]\+\(\.[0-9]\+\)\{3\}' vanadium/args.gn)" >> $GITHUB_ENV
           echo "${{ github.workspace }}/depot_tools" >> $GITHUB_PATH
 
-          export CCACHE_DIR="$HOME/.cache/ccache"
-          mkdir -p "$CCACHE_DIR" "$HOME/.config/ccache"
-          echo "CCACHE_DIR=$CCACHE_DIR" >> "$GITHUB_ENV"
-          echo "CCACHE_BASEDIR=$GITHUB_WORKSPACE" >> "$GITHUB_ENV"
-          echo "CCACHE_COMPILERCHECK=content" >> "$GITHUB_ENV"
-          echo "CCACHE_NOHASHDIR=true" >> "$GITHUB_ENV"
-          echo "CCACHE_SLOPPINESS=file_stat_matches,include_file_ctime,include_file_mtime,time_macros" >> "$GITHUB_ENV"
-          ccache --set-config=max_size="10G"
-          ccache --set-config=compression=true
-          ccache --zero-stats || true
-          ccache --set-config=file_clone=true || true
-
-      # - name: Free Disk Space (Ubuntu)
-      #   uses: jlumbroso/free-disk-space@main
-      #   with:
-      #     # this might remove tools that are actually needed,
-      #     # if set to "true" but frees about 6 GB
-      #     tool-cache: false
-
-      #     # all of these default to true, but feel free to set to
-      #     # "false" if necessary for your workflow
-      #     android: true
-      #     dotnet: true
-      #     haskell: true
-      #     large-packages: true
-      #     docker-images: true
-      #     swap-storage: true
+      # - name: Max build space
+      #   run: |
+      #     sudo rm -rf /usr/share/dotnet
+      #     sudo rm -rf /usr/local/lib/android
+      #     sudo rm -rf /opt/ghc
+      #     sudo swapoff -a
+      #     sudo rm -f /mnt/swapfile
 
       - name: Restore data
         id: restore-data
         uses: actions/cache/restore@v6
         with:
           path: |
-            ~/.cache/ccache
-            ~/.config/ccache
+            chromium/src/.git
+            chromium/src/titanium
+            chromium/src/chrome
+            chromium/src/v8
+            chromium/src/chromeos
+            chromium/src/build
             chromium/src/out
-          key: ccache-${{ env.chromium_version }}-
+            chromium/src/.landmines
+            chromium/src/testing
+            chromium/src/android_webview
+            chromium/src/components
+          key: chromium-data-${{ env.chromium_version }}-
 
       - name: Get depot_tools
         run: |
           git clone --depth 1 https://chromium.googlesource.com/chromium/tools/depot_tools.git
 
       - name: Get chromium source ${{ env.chromium_version }}
+        if: steps.restore-data.outputs.cache-hit != 'true'
         env:
           CHROMIUM_SOURCE: https://github.com/chromium/chromium.git
           # CHROMIUM_SOURCE: https://chromium.googlesource.com/chromium/src.git
@@ -115,6 +103,7 @@ jobs:
           git checkout $chromium_version
 
       - name: Apply vanadium patches
+        if: steps.restore-data.outputs.cache-hit != 'true'
         working-directory: chromium/src
         run: |
           # https://grapheneos.org/build#browser-and-webview
@@ -151,6 +140,7 @@ jobs:
       #     ${{ github.workspace }}/patch.sh
 
       - name: Patch
+        if: steps.restore-data.outputs.cache-hit != 'true'
         working-directory: chromium/src
         run: |
           version_lt() {
@@ -327,21 +317,9 @@ jobs:
           export PATCHED=1
 
       - name: Configure
+        if: steps.restore-data.outputs.cache-hit != 'true'
         working-directory: chromium/src
         run: |
-          # Generate ccache config
-          # mkdir -p $CCACHE_DIR
-          # CCACHE_CONFIGPATH=$CCACHE_DIR/ccache.conf
-          # if ! test -f $CCACHE_CONFIGPATH; then
-          #   echo 'compiler_check = content' >> $CCACHE_CONFIGPATH
-          #   echo "stats = false" >> $CCACHE_CONFIGPATH
-          #   echo 'max_size = 20G' >> $CCACHE_CONFIGPATH
-          #   echo "base_dir = ${{ github.workspace }}/chromium/src/out/Default" >> $CCACHE_CONFIGPATH
-          #   echo "hash_dir = false" >> $CCACHE_CONFIGPATH
-          #   echo "fileclone = true" >> $CCACHE_CONFIGPATH
-          #   echo "sloppiness = include_file_mtime" >> $CCACHE_CONFIGPATH
-          # fi
-
           mkdir -p ${{ github.workspace }}/chromium/src/out/Default
           mkdir -p ${{ github.workspace }}/chromium/src/out/tmp
           mkdir -p ${{ github.workspace }}/chromium/src/out/release
@@ -349,17 +327,9 @@ jobs:
           # curl -L https://github.com/dandelions/android-titanium-browser/raw/refs/heads/main/args.gn > out/Default/args.gn
           sed -i 's/target_cpu = "arm"/target_cpu = "arm64"/' out/Default/args.gn
           sed -i 's/io.github.jqssun.helium/com.android.desktopchromium/g' out/Default/args.gn
-          sed -i 's/use_siso = true/use_siso = false/g' out/Default/args.gn
           gn gen out/Default # gn args out/Default; echo 'treat_warnings_as_errors = false' >> out/Default/args.gn
-          echo >> out/Default/args.gn
-          echo 'cc_wrapper = "ccache"' >> out/Default/args.gn
-
-      - name: Show compiler cache stats
-        if: always()
-        run: ccache --show-stats || true
 
       - name: Build
-        if: steps.restore-data.outputs.cache-hit != 'true'
         id: build
         working-directory: chromium/src
         run: |
@@ -375,10 +345,6 @@ jobs:
 
           echo timoutExitStatus=$timoutExitStatus
 
-      - name: Show compiler cache stats
-        if: always()
-        run: ccache --show-stats || true
-
       - name: Build not finished
         if: steps.build.outputs.timoutExitStatus == 124
         run: echo build not finished
@@ -393,16 +359,24 @@ jobs:
       - name: generate cache key
         id: generate-cacheKey
         run: |
-          echo cacheKey=ccache-${{ env.chromium_version }}-${{ env.timestamp }} >> $GITHUB_OUTPUT
+          echo cacheKey=chromium-data-${{ env.chromium_version }}-${{ env.timestamp }} >> $GITHUB_OUTPUT
 
       - name: Store data
         if: always()
         uses: actions/cache/save@v6
         with:
           path: |
-            ~/.cache/ccache
-            ~/.config/ccache
+            chromium/src/.git
+            chromium/src/titanium
+            chromium/src/chrome
+            chromium/src/v8
+            chromium/src/chromeos
+            chromium/src/build
             chromium/src/out
+            chromium/src/.landmines
+            chromium/src/testing
+            chromium/src/android_webview
+            chromium/src/components
           key: ${{ steps.generate-cacheKey.outputs.cacheKey }}
 
       # - name: Set sign keys
