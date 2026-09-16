@@ -25,7 +25,6 @@ jobs:
     outputs:
       timoutExitStatus: ${{ steps.build.outputs.timoutExitStatus }}
       cacheKey: ${{ steps.generate-cacheKey.outputs.cacheKey }}
-    env:
     steps:
       - uses: actions/checkout@v7
         with:
