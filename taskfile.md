@@ -525,6 +525,7 @@ done
 | ./.git            | 1484936 | 1594100          | 1564560        |                |                |                  |          |
 | ./net             | 79496   |                  | 108628         |                |                |                  |          |
 | ./services        | 38844   | 38848            |                |                |                |                  |          |
+| ./titanium        |         | 2024             |                | 5656           |                | 5692             |          |
 | ./tools           | 130436  |                  | 291332         |                |                |                  |          |
 | ./buildtools      | 668     |                  | 65844          | 65848          |                |                  |          |
 | ./chrome          | 1079528 | 1080404          | 1592304        | 2532776        |                | 2532816          |          |
@@ -544,3 +545,15 @@ done
 | ./android_webview | 17616   | 17620            | 3294024        |                |                |                  |          |
 | ./components      | 481796  | 481908           | 494880         |                |                |                  |          |
 | ./gpu             | 17904   |                  |                | 17916          |                |                  |          |
+
+## test_rebuild
+
+```sh
+eval "$(cr -c common)"
+cd chromium/src
+rm -rf third_party
+git checkout third_party
+du -ad0 third_party
+cr sync_and_run_hooks
+du -ad0 third_party
+```
