@@ -108,9 +108,8 @@ cd ..
 git add vanadium
 git config --global user.name 'github-actions[bot]'
 git config --global user.email 'github-actions[bot]@users.noreply.github.com'
-if ! git diff vanadium --staged --quiet; then
-  git add vanadium
-  git commit -m "update"
+if ! git diff --staged --quiet; then
+  git commit -am "update"
   git push
 fi
 ```
