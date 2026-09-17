@@ -87,14 +87,16 @@ jobs:
 
       - name: Print cache hit
         run: |
-          echo "${{ fromJson(steps.restore-data.outputs) }}"
+          echo "${{ steps.restore-data.outputs.cache-hit }}"
+          echo "${{ steps.restore-data.outputs.cache-primary-key }}"
+          echo "${{ steps.restore-data.outputs.cache-matched-key }}"
 
       - name: Get depot_tools
         run: |
           git clone --depth 1 https://chromium.googlesource.com/chromium/tools/depot_tools.git
 
       - name: Get chromium source ${{ env.chromium_version }}
-        if: steps.restore-data.outputs.cache-hit != 'true'
+        if: steps.restore-data.outputs.cache-matched-key == ''
         env:
           CHROMIUM_SOURCE: https://github.com/chromium/chromium.git
           # CHROMIUM_SOURCE: https://chromium.googlesource.com/chromium/src.git
@@ -106,7 +108,7 @@ jobs:
           git checkout $chromium_version
 
       - name: Apply vanadium patches
-        if: steps.restore-data.outputs.cache-hit != 'true'
+        if: steps.restore-data.outputs.cache-matched-key == ''
         working-directory: chromium/src
         run: |
           # https://grapheneos.org/build#browser-and-webview
@@ -143,7 +145,7 @@ jobs:
       #     ${{ github.workspace }}/patch.sh
 
       - name: Patch
-        if: steps.restore-data.outputs.cache-hit != 'true'
+        if: steps.restore-data.outputs.cache-matched-key == ''
         working-directory: chromium/src
         run: |
           version_lt() {
@@ -320,7 +322,7 @@ jobs:
           export PATCHED=1
 
       - name: Configure
-        if: steps.restore-data.outputs.cache-hit != 'true'
+        if: steps.restore-data.outputs.cache-matched-key == ''
         working-directory: chromium/src
         run: |
           mkdir -p ${{ github.workspace }}/chromium/src/out/Default
