@@ -1,3 +1,81 @@
+## untouched list
+
+```
+./.rustfmt.toml
+./.git
+./PRESUBMIT_test.py
+./storage
+./services
+./clusterfuzz-data
+./codelabs
+./.claude
+./sandbox
+./crypto
+./.geminiignore
+./fuchsia_web
+./styleguide
+./DIR_METADATA
+./printing
+./.gitmodules
+./gin
+./OWNERS
+./chromecast
+./.clangd
+./cc
+./ios_internal
+./ATL_OWNERS
+./.agents
+./CPPLINT.cfg
+./dbus
+./.gemini
+./internal
+./headless
+./PRESUBMIT.py
+./codereview.settings
+./url
+./.clang-tidy
+./.yapfignore
+./.git-blame-ignore-revs
+./AUTHORS
+./WATCHLISTS
+./PRESUBMIT_test_mocks.py
+./.cursorignore
+./ipc
+./.vpython3
+./signing_keys
+./SECURITY_OWNERS
+./CODE_OF_CONDUCT.md
+./BUILD.gn
+./BRANCH_FEATURE_OWNERS
+./package.json
+./.gn
+./mojo
+./DEPS
+./.gitattributes
+./.gitignore
+./extensions
+./BRANCH_OWNERS
+./remoting
+./LICENSE.chromium_os
+./pdf
+./.gitallowed
+./google_apis
+./CRYPTO_OWNERS
+./rlz
+./README.md
+./.mailmap
+./webkit
+./device
+./infra
+./apps
+./sql
+./clank
+./.github
+./LICENSE
+./.clang-format
+./build_overrides
+```
+
 ## file change process
 
 | file              | cloned  | vanadium_patched | gclient_synced | gclient_hooked | deps_installed | titanium_patched | gn_gened |
@@ -37,32 +115,32 @@
 ## unchanged list after rework
 
 ```
-108628	./net
-38848	./services
-792480	./content
-17916	./gpu
-291332	./tools
-65848	./buildtools
-4400	./sandbox
-135400	./media
-5172	./agents
-76056	./docs
-104412	./base
-1496	./skia
+./net
+./services
+./content
+./gpu
+./tools
+./buildtools
+./sandbox
+./media
+./agents
+./docs
+./base
+./skia
 ```
 
 ## changed list after rework
 
 ```
-1564628	./.git
-5692	./titanium
-2532824	./chrome
-265644	./v8
-81956	./chromeos
-503148	./build
-26039324	./third_party
-3621796	./out
-238216	./testing
-3294032	./android_webview
-494892	./components
+./.git
+./titanium
+./chrome
+./v8
+./chromeos
+./build
+./third_party
+./out
+./testing
+./android_webview
+./components
 ```
