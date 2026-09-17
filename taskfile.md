@@ -650,13 +650,16 @@ timeout 65s cr build
 
 ### test_list
 
+./third_party
+./build
+
+
 ```
 ./titanium
 ./chrome
+./v8
 ./chromeos
 ./testing
-./v8
-./build
 ./android_webview
 ./components
 ```
