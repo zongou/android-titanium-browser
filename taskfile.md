@@ -612,30 +612,53 @@ mkdir -p $BACKUP_DIR
 ln -snf $BACKUP_DIR /tmp/chromium_data/latest
 
 cr -c untouched_list | while IFS= read -r f; do
-  # mv $f $BACKUP_DIR/$f
-  rm -rf $f
+  if test -e $f; then
+    if ! test -e $BACKUP_DIR/$f; then
+      mv $f $BACKUP_DIR/$f
+    else
+      rm -rf $f
+    fi
+  fi
 done
 
 cr -c unchanged_list | while IFS= read -r f; do
-  # mv $f $BACKUP_DIR/$f
-  rm -rf $f
+  if test -e $f; then
+    if ! test -e $BACKUP_DIR/$f; then
+      mv $f $BACKUP_DIR/$f
+    else
+      rm -rf $f
+    fi
+  fi
 done
 
-mv ./titanium $BACKUP_DIR/
-mv ./chrome $BACKUP_DIR/
-# mv ./v8 $BACKUP_DIR/
-mv ./chromeos $BACKUP_DIR/
-# mv ./build $BACKUP_DIR/
-mv ./third_party $BACKUP_DIR/
-mv ./testing $BACKUP_DIR/
-mv ./android_webview $BACKUP_DIR/
-mv ./components $BACKUP_DIR/
+cr -c test_list | while IFS= read -r f; do
+  if test -e $f; then
+    if ! test -e $BACKUP_DIR/$f; then
+      mv $f $BACKUP_DIR/$f
+    else
+      rm -rf $f
+    fi
+  fi
+done
 
 cr list_file_size
 echo Restoring source ...
 git restore .
 cr sync_and_run_hooks
-timeout 1m cr build
+timeout 65s cr build
+```
+
+### test_list
+
+```
+./titanium
+./chrome
+./chromeos
+./testing
+./v8
+./build
+./android_webview
+./components
 ```
 
 ### test_rebuild2
