@@ -87,7 +87,7 @@ jobs:
 
       - name: Print cache hit
         run: |
-          echo ${{ fromJson(steps.restore-data.outputs) }}
+          echo "${{ fromJson(steps.restore-data.outputs) }}"
 
       - name: Get depot_tools
         run: |
