@@ -85,6 +85,10 @@ jobs:
             chromium/src/components
           key: chromium-data-${{ env.chromium_version }}-
 
+      - name: Restore source
+        working-directory: chromium/src
+        run: git restore .
+
       - name: Print cache hit
         run: |
           echo "${{ steps.restore-data.outputs.cache-hit }}"
