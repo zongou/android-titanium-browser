@@ -3,12 +3,13 @@
 ### setup_vscode
 
 ```sh
-code --install-extension esbenp.prettier-vscode
-code --install-extension zongou.simple-runner
 cd /tmp
-git clone github.com/zongou/vscli
+git clone https://github.com/zongou/vscli
 cd vscli
 ./vscli patch
+
+code --install-extension esbenp.prettier-vscode
+code --install-extension zongou.simple-runner
 ```
 
 ### get:cr
