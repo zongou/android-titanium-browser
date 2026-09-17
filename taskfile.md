@@ -488,41 +488,10 @@ cd $SCRIPT_DIR/chromium/src
 #     du -d0 $f
 #   fi
 # done
-du -ad1
+du -ad1 -h
 ```
 
-### changed_list
-
-```
-./titanium
-./chrome
-./v8
-./chromeos
-./build
-./third_party
-./out
-./testing
-./android_webview
-./components
-```
-
-### unchanged_list
-```
-./net
-./services
-./content
-./gpu
-./tools
-./buildtools
-./sandbox
-./media
-./agents
-./docs
-./base
-./skia
-```
-
-## untouched_list
+### untouched_list
 
 ```
 ./.rustfmt.toml
@@ -598,21 +567,72 @@ du -ad1
 ./LICENSE
 ./.clang-format
 ./build_overrides
+./.landmines
 ```
+
+### unchanged_list
+
+```
+./net
+./services
+./content
+./gpu
+./tools
+./buildtools
+./sandbox
+./media
+./agents
+./docs
+./base
+./skia
+```
+
+### changed_list
+
+```
+./titanium
+./chrome
+./v8
+./chromeos
+./build
+./third_party
+./testing
+./android_webview
+./components
+```
+
 
 ## test_rebuild
 
 ```sh
+reset
 eval "$(cr -c common)"
 rm /tmp/siso*
 cd chromium/src
-BACKUP_DIR="/tmp/$(uuidgen)"
+BACKUP_DIR="/tmp/chromium_data/$(date +%s)"
 echo BACKUP_DIR=$BACKUP_DIR
 mkdir -p $BACKUP_DIR
 
 cr -c untouched_list | while IFS= read -r f; do
-  echo mv $f $BACKUP_DIR/$f
+  mv $f $BACKUP_DIR/$f
 done
+
+cr -c unchanged_list | while IFS= read -r f; do
+  mv $f $BACKUP_DIR/$f
+done
+
+mv ./titanium $BACKUP_DIR/
+mv ./chrome $BACKUP_DIR/
+mv ./v8 $BACKUP_DIR/
+mv ./chromeos $BACKUP_DIR/
+# mv ./build $BACKUP_DIR/
+mv ./third_party $BACKUP_DIR/
+mv ./testing $BACKUP_DIR/
+mv ./android_webview $BACKUP_DIR/
+mv ./components $BACKUP_DIR/
+
+cr list_file_size
+echo Restoring source ...
 git restore .
 cr sync_and_run_hooks
 cr build
