@@ -601,7 +601,6 @@ du -ad1 -h
 ./components
 ```
 
-
 ## test_rebuild
 
 ```sh
@@ -612,21 +611,24 @@ cd chromium/src
 BACKUP_DIR="/tmp/chromium_data/$(date +%s)"
 echo BACKUP_DIR=$BACKUP_DIR
 mkdir -p $BACKUP_DIR
+ln -snf $BACKUP_DIR /tmp/chromium_data/latest
 
 cr -c untouched_list | while IFS= read -r f; do
-  mv $f $BACKUP_DIR/$f
+  # mv $f $BACKUP_DIR/$f
+  rm -rf $f
 done
 
 cr -c unchanged_list | while IFS= read -r f; do
-  mv $f $BACKUP_DIR/$f
+  # mv $f $BACKUP_DIR/$f
+  rm -rf $f
 done
 
 mv ./titanium $BACKUP_DIR/
-# mv ./chrome $BACKUP_DIR/
-mv ./v8 $BACKUP_DIR/
+mv ./chrome $BACKUP_DIR/
+# mv ./v8 $BACKUP_DIR/
 mv ./chromeos $BACKUP_DIR/
 # mv ./build $BACKUP_DIR/
-# mv ./third_party $BACKUP_DIR/
+mv ./third_party $BACKUP_DIR/
 mv ./testing $BACKUP_DIR/
 mv ./android_webview $BACKUP_DIR/
 mv ./components $BACKUP_DIR/
@@ -635,20 +637,19 @@ cr list_file_size
 echo Restoring source ...
 git restore .
 cr sync_and_run_hooks
-cr build
+# cr build
 ```
 
 ### test_rebuild2
-
 
 ```sh
 eval "$(cr -c common)"
 cd $SCRIPT_DIR/chromium
 mv src src_origin
 mkdir src
-mv src_origin/.git src_origin/chrome src_origin/build src_origin/third_party src_origin/out src/
+mv src_origin/.git src_origin/chrome src_origin/build src_origin/out src/
 cd $SCRIPT_DIR/chromium/src
 git restore .
 cr sync_and_run_hooks
-cr build
+#cr build
 ```

@@ -24,13 +24,26 @@ cargo run build:release
 cargo run install
 ```
 
+### get:msedit
+
+```sh
+# https://github.com/microsoft/edit/releases/download/v2.0.0/edit-2.0.0-x86_64-linux-gnu.tar.gz
+VERSION=$(curl -s -S "https://api.github.com/repos/microsoft/edit/releases" | jq -r .[0].tag_name)
+echo "Downloading msedit ${VERSION}"
+ARCH=$(uname -m)
+URL=https://github.com/microsoft/edit/releases/download/${VERSION}/edit-${VERSION##v}-x86_64-linux-gnu.tar.gz
+# curl -L ${URL} | gzip -d | tar -t
+curl -L ${URL} | gzip -d | tar -C /usr/local/bin -x --wildcards "edit"
+edit --version
+```
+
 ### get:fresh
 
 ```sh
 VERSION=$(curl -s -S "https://api.github.com/repos/sinelaw/fresh/releases" | jq -r .[0].tag_name)
 echo "Downloading fresh-editor ${VERSION}"
 ARCH=$(uname -m)
-URL=https://github.com/sinelaw/fresh/releases/download/v0.4.6/fresh-editor-${ARCH}-unknown-linux-musl.tar.gz
+URL=https://github.com/sinelaw/fresh/releases/download/${VERSION}/fresh-editor-${ARCH}-unknown-linux-musl.tar.gz
 curl -L ${URL} | gzip -d | tar -C /usr/local/bin --strip-components=1 -x --wildcards "*/fresh"
 fresh --version
 ```
@@ -116,7 +129,6 @@ if ! command -v dufs >/dev/null 2>&1; then
 fi
 nohup dufs --allow-all >/tmp/dufs.log 2>&1 &
 ```
-
 
 ### convert_patch
 
