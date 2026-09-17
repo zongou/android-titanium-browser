@@ -85,6 +85,10 @@ jobs:
             chromium/src/components
           key: chromium-data-${{ env.chromium_version }}-
 
+      - name: Print cache hit
+        run: |
+          echo ${{ fromJson(steps.restore-data.outputs) }}
+
       - name: Get depot_tools
         run: |
           git clone --depth 1 https://chromium.googlesource.com/chromium/tools/depot_tools.git
