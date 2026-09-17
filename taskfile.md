@@ -622,11 +622,11 @@ cr -c unchanged_list | while IFS= read -r f; do
 done
 
 mv ./titanium $BACKUP_DIR/
-mv ./chrome $BACKUP_DIR/
+# mv ./chrome $BACKUP_DIR/
 mv ./v8 $BACKUP_DIR/
 mv ./chromeos $BACKUP_DIR/
 # mv ./build $BACKUP_DIR/
-mv ./third_party $BACKUP_DIR/
+# mv ./third_party $BACKUP_DIR/
 mv ./testing $BACKUP_DIR/
 mv ./android_webview $BACKUP_DIR/
 mv ./components $BACKUP_DIR/
@@ -637,3 +637,16 @@ git restore .
 cr sync_and_run_hooks
 cr build
 ```
+
+<!-- 
+```sh
+eval "$(cr -c common)"
+cd $SCRIPT_DIR/chromium
+mv src src_origin
+mkdir src
+mv src_origin/.git src_origin/build src_origin/chrome src_origin/out src/
+cd $SCRIPT_DIR/chromium/src
+git restore .
+cr sync_and_run_hooks
+cr build
+``` -->
