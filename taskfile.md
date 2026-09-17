@@ -483,11 +483,12 @@ cr build
 eval "$(cr -c common)"
 mkdir -p /tmp/build-chromium
 cd $SCRIPT_DIR/chromium/src
-cr -c changed_list | while IFS= read -r f; do
-  if test -d $f; then
-    du -d0 $f
-  fi
-done
+# cr -c changed_list | while IFS= read -r f; do
+#   if test -d $f; then
+#     du -d0 $f
+#   fi
+# done
+du -ad1
 ```
 
 ### changed_list
@@ -527,11 +528,9 @@ done
 ./.rustfmt.toml
 ./PRESUBMIT_test.py
 ./storage
-./services
 ./clusterfuzz-data
 ./codelabs
 ./.claude
-./sandbox
 ./crypto
 ./.geminiignore
 ./fuchsia_web
@@ -549,6 +548,7 @@ done
 ./.agents
 ./CPPLINT.cfg
 ./dbus
+./ios
 ./.gemini
 ./internal
 ./headless
@@ -558,6 +558,7 @@ done
 ./.clang-tidy
 ./.yapfignore
 ./.git-blame-ignore-revs
+./ui
 ./AUTHORS
 ./WATCHLISTS
 ./PRESUBMIT_test_mocks.py
@@ -584,6 +585,7 @@ done
 ./google_apis
 ./CRYPTO_OWNERS
 ./rlz
+./ash
 ./README.md
 ./.mailmap
 ./webkit
