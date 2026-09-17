@@ -638,15 +638,17 @@ cr sync_and_run_hooks
 cr build
 ```
 
-<!-- 
+### test_rebuild2
+
+
 ```sh
 eval "$(cr -c common)"
 cd $SCRIPT_DIR/chromium
 mv src src_origin
 mkdir src
-mv src_origin/.git src_origin/build src_origin/chrome src_origin/out src/
+mv src_origin/.git src_origin/chrome src_origin/build src_origin/third_party src_origin/out src/
 cd $SCRIPT_DIR/chromium/src
 git restore .
 cr sync_and_run_hooks
 cr build
-``` -->
+```
