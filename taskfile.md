@@ -31,7 +31,6 @@ export SCRIPT_DIR=$(dirname $CR_FILE)
 export PATH=$SCRIPT_DIR/depot_tools:$PATH
 export chromium_version=$(grep -m1 -o '[0-9]\+\(\.[0-9]\+\)\{3\}' vanadium/args.gn)
 export chromium_srcdir=${chromium_srcdir-$SCRIPT_DIR/chromium/src}
-export SISO_BUILD_ID=f477a6aa-d9c2-470d-8848-bcbf2d225a4b
 
 replace() {
   export org=$2 new=$3
@@ -481,7 +480,6 @@ cr build
 
 ```sh
 eval "$(cr -c common)"
-mkdir -p /tmp/build-chromium
 cd $SCRIPT_DIR/chromium/src
 # cr -c changed_list | while IFS= read -r f; do
 #   if test -d $f; then
@@ -637,7 +635,7 @@ cr list_file_size
 echo Restoring source ...
 git restore .
 cr sync_and_run_hooks
-# cr build
+timeout 1m cr build
 ```
 
 ### test_rebuild2
