@@ -72,17 +72,7 @@ jobs:
         uses: actions/cache/restore@v6
         with:
           path: |
-            chromium/src/.git
-            chromium/src/titanium
-            chromium/src/chrome
-            chromium/src/v8
-            chromium/src/chromeos
-            chromium/src/build
-            chromium/src/out
-            chromium/src/.landmines
-            chromium/src/testing
-            chromium/src/android_webview
-            chromium/src/components
+            chromium
           key: chromium-data-${{ env.chromium_version }}-
 
       - name: Restore source
@@ -365,6 +355,109 @@ jobs:
           echo build finished
           cp $(find out/Default/apks -name 'Chrome*.apk') out/tmp/$chromium_version-arm64-v8a.apk
 
+      - name: Prepare for caching
+        working-directory: chromium/src
+        run: |
+          rm -rf \
+            ./.rustfmt.toml \
+            ./PRESUBMIT_test.py \
+            ./storage \
+            ./clusterfuzz-data \
+            ./codelabs \
+            ./.claude \
+            ./crypto \
+            ./.geminiignore \
+            ./fuchsia_web \
+            ./styleguide \
+            ./DIR_METADATA \
+            ./printing \
+            ./.gitmodules \
+            ./gin \
+            ./OWNERS \
+            ./chromecast \
+            ./.clangd \
+            ./cc \
+            ./ios_internal \
+            ./ATL_OWNERS \
+            ./.agents \
+            ./CPPLINT.cfg \
+            ./dbus \
+            ./ios \
+            ./.gemini \
+            ./internal \
+            ./headless \
+            ./PRESUBMIT.py \
+            ./codereview.settings \
+            ./url \
+            ./.clang-tidy \
+            ./.yapfignore \
+            ./.git-blame-ignore-revs \
+            ./ui \
+            ./AUTHORS \
+            ./WATCHLISTS \
+            ./PRESUBMIT_test_mocks.py \
+            ./.cursorignore \
+            ./ipc \
+            ./.vpython3 \
+            ./signing_keys \
+            ./SECURITY_OWNERS \
+            ./CODE_OF_CONDUCT.md \
+            ./BUILD.gn \
+            ./BRANCH_FEATURE_OWNERS \
+            ./package.json \
+            ./.gn \
+            ./mojo \
+            ./DEPS \
+            ./.gitattributes \
+            ./.gitignore \
+            ./extensions \
+            ./BRANCH_OWNERS \
+            ./remoting \
+            ./LICENSE.chromium_os \
+            ./pdf \
+            ./.gitallowed \
+            ./google_apis \
+            ./CRYPTO_OWNERS \
+            ./rlz \
+            ./ash \
+            ./README.md \
+            ./.mailmap \
+            ./webkit \
+            ./device \
+            ./infra \
+            ./apps \
+            ./sql \
+            ./clank \
+            ./.github \
+            ./LICENSE \
+            ./.clang-format \
+            ./build_overrides \
+            ./.landmines
+
+          rm -rf \
+            ./net \
+            ./services \
+            ./content \
+            ./gpu \
+            ./tools \
+            ./buildtools \
+            ./sandbox \
+            ./media \
+            ./agents \
+            ./docs \
+            ./base \
+            ./skia
+
+          rm -rf \
+            ./titanium \
+            ./chrome \
+            ./v8 \
+            ./chromeos \
+            ./testing \
+            ./android_webview \
+            ./components \
+            ./third_party
+
       - name: generate cache key
         id: generate-cacheKey
         run: |
@@ -375,17 +468,7 @@ jobs:
         uses: actions/cache/save@v6
         with:
           path: |
-            chromium/src/.git
-            chromium/src/titanium
-            chromium/src/chrome
-            chromium/src/v8
-            chromium/src/chromeos
-            chromium/src/build
-            chromium/src/out
-            chromium/src/.landmines
-            chromium/src/testing
-            chromium/src/android_webview
-            chromium/src/components
+            chromium
           key: ${{ steps.generate-cacheKey.outputs.cacheKey }}
 
       # - name: Set sign keys
