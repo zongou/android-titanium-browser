@@ -49,7 +49,7 @@ jobs:
           echo "inputs: ${{ toJson(inputs) }}"
 
       - name: Restore data
-        if: inputs.restore-data == 'true' || always()
+        if: inputs.restore-data
         id: restore-data
         uses: actions/cache/restore@v6
         with:
