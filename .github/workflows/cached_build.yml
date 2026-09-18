@@ -5,9 +5,6 @@ on:
     paths: .github/workflows/cached_build.yml
   workflow_dispatch:
     inputs:
-      ttyd-credential:
-        description: ttyd credential username:pass
-        required: false
       timeout:
         description: "Timeout in minutes"
         required: false
@@ -76,6 +73,7 @@ jobs:
           key: chromium-data-${{ env.chromium_version }}-
 
       - name: Restore source
+        if: steps.restore-data.outputs.cache-matched-key != ''
         working-directory: chromium/src
         run: git restore .
 
