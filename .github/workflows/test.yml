@@ -44,8 +44,12 @@ jobs:
         with:
           token: ${{ inputs.vscode-server-token || secrets.VSCODE_SERVER_TOKEN }}
 
+      - name: Print inputs
+        run: |
+          echo "inputs: ${{ toJson(inputs) }}"
+
       - name: Restore data
-        if: inputs.restore-data == 'true'
+        if: inputs.restore-data == 'true' || always()
         id: restore-data
         uses: actions/cache/restore@v6
         with:
