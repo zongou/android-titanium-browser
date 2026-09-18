@@ -50,17 +50,7 @@ jobs:
         uses: actions/cache/restore@v6
         with:
           path: |
-            chromium/src/.git
-            chromium/src/titanium
-            chromium/src/chrome
-            chromium/src/v8
-            chromium/src/chromeos
-            chromium/src/build
-            chromium/src/out
-            chromium/src/.landmines
-            chromium/src/testing
-            chromium/src/android_webview
-            chromium/src/components
+            chromium
           key: chromium-data-
 
       - name: Keep alive
