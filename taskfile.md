@@ -712,7 +712,17 @@ rm -rf $SCRIPT_DIR/chromium/src_new/
 eval "$(cr -c common)"
 cd $SCRIPT_DIR/chromium/src
 rm -rf third_party/siso
-git restore
+git restore .
+cr sync_and_run_hooks
+timeout 65s cr build
+```
+
+
+## rebuild
+```sh
+eval "$(cr -c common)"
+cd $SCRIPT_DIR/chromium/src
+git restore .
 cr sync_and_run_hooks
 timeout 65s cr build
 ```
