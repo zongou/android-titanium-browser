@@ -175,6 +175,8 @@ jobs:
               echo "::warning::cr_build_revision not found; using CCACHE_COMPILERCHECK=content"
           fi
 
+          echo CCACHE_COMPILERCHECK=$CCACHE_COMPILERCHECK >> $GITHUB_ENV
+
       # - name: Patch
       #   working-directory: chromium/src
       #   run: |
