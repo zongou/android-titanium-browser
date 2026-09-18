@@ -669,12 +669,11 @@ timeout 65s cr build
 
 ```sh
 eval "$(cr -c common)"
-cd $SCRIPT_DIR/chromium
-mv src src_origin
-mkdir src_new
-mv src_origin/.git src_origin/build src_origin/out src_origin/third_party src_new/
-mv src_new src
-cd $SCRIPT_DIR/chromium/src
+mkdir -p chromium/src_new
+mv chromium/src/.git chromium/src/build chromium/src/out chromium/src/third_party chromium/src_new/
+mv chromium/src chromium/src_origin
+mv chromium/src_new chromium/src
+cd chromium/src
 git restore .
 cr sync_and_run_hooks
 timeout 65s cr build
