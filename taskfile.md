@@ -653,7 +653,6 @@ timeout 65s cr build
 ./third_party
 ./build
 
-
 ```
 ./titanium
 ./chrome
@@ -667,14 +666,53 @@ timeout 65s cr build
 
 ### test_rebuild2
 
+two dirs inpacts the rebuild process, third_party and build
+
+```sh
+reset
+eval "$(cr -c common)"
+rm -rf $SCRIPT_DIR/chromium/src_origin
+mkdir -p $SCRIPT_DIR/chromium/src_new/third_party
+# mv chromium/src/.git chromium/src/build chromium/src/out chromium/src/third_party chromium/src_new/
+mv chromium/src/.git chromium/src/build chromium/src/out chromium/src_new/
+
+
+mkdir -p $SCRIPT_DIR/chromium/src_new/third_party
+cd $SCRIPT_DIR/chromium/src/third_party
+mv \
+BUILD.gn \
+DEPS \
+siso \
+six \
+skia \
+$SCRIPT_DIR/chromium/src_new/third_party/
+
+
+mv $SCRIPT_DIR/chromium/src $SCRIPT_DIR/chromium/src_origin
+mv $SCRIPT_DIR/chromium/src_new $SCRIPT_DIR/chromium/src
+cd $SCRIPT_DIR/chromium/src
+du -ahd1
+git restore .
+cr sync_and_run_hooks
+timeout 65s cr build
+```
+
+## rollback
+
 ```sh
 eval "$(cr -c common)"
-mkdir -p chromium/src_new
-mv chromium/src/.git chromium/src/build chromium/src/out chromium/src/third_party chromium/src_new/
-mv chromium/src chromium/src_origin
-mv chromium/src_new chromium/src
-cd chromium/src
-git restore .
+mv $SCRIPT_DIR/chromium/src_new/.git $SCRIPT_DIR/chromium/src_new/out $SCRIPT_DIR/chromium/src_new/build $SCRIPT_DIR/chromium/src/
+mv $SCRIPT_DIR/chromium/src_new/third_party/* $SCRIPT_DIR/chromium/src/third_party/
+rm -rf $SCRIPT_DIR/chromium/src_new/
+```
+
+### test_rebuild3
+
+```sh
+eval "$(cr -c common)"
+cd $SCRIPT_DIR/chromium/src
+rm -rf third_party/siso
+git restore
 cr sync_and_run_hooks
 timeout 65s cr build
 ```
