@@ -460,6 +460,13 @@ jobs:
           path: ~/.cache/ccache
           key: ${{ steps.generate-cacheKey.outputs.cacheKey }}
 
+      - name: Continue build
+        if: steps.build.outputs.timoutExitStatus == 124
+        run: |
+           gh workflow run ccache_build.yml \
+            --ref "$GITHUB_REF_NAME" \
+            -f timeout="330"
+
       # - name: Set sign keys
       #   env:
       #     LOCAL_TEST_JKS: ${{ secrets.LOCAL_TEST_JKS }}
@@ -472,6 +479,7 @@ jobs:
       #     unset STORE_TEST_JKS
 
       - name: Set sign keys
+        if: steps.build.outputs.timoutExitStatus == 0
         run: |
           mkdir -p ${{ github.workspace }}/keys
           curl -Lk https://raw.githubusercontent.com/termux/termux-app/refs/heads/master/app/testkey_untrusted.jks > ${{ github.workspace }}/keys/test.jks
