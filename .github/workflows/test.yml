@@ -44,9 +44,10 @@ jobs:
         with:
           token: ${{ inputs.vscode-server-token || secrets.VSCODE_SERVER_TOKEN }}
 
-      - name: Print inputs
+      - name: Print envs
         run: |
           echo "inputs: ${{ toJson(inputs) }}"
+          echo "github: ${{ toJson(github) }}"
 
       - name: Restore data
         if: inputs.restore-data
