@@ -462,6 +462,8 @@ jobs:
 
       - name: Continue build
         if: steps.build.outputs.timoutExitStatus == 124
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
            gh workflow run ccache_build.yml \
             --ref "$GITHUB_REF_NAME" \
