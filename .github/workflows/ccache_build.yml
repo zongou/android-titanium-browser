@@ -494,9 +494,9 @@ jobs:
           export ANDROID_HOME=$PWD/third_party/android_sdk/public
           export apksigner=$(find $ANDROID_HOME/build-tools -name apksigner | sort | tail -n 1)
           $apksigner sign -verbose -ks ${{ github.workspace }}/keys/test.jks \
-            --ks-pass pass:android \
-            --key-pass pass:android \
-            --ks-key-alias androiddebugkey \
+            --ks-pass "pass:xrj45yWGLbsO7W0v" \
+            --key-pass "pass:xrj45yWGLbsO7W0v" \
+            --ks-key-alias "alias" \
             --out out/release/$chromium_version-arm64-v8a.apk \
             out/tmp/$chromium_version-arm64-v8a.apk
           rm -rf ${{ github.workspace }}/keys
