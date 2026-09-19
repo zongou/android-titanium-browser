@@ -35,12 +35,16 @@ jobs:
 
       - uses: zongou/run-ttyd-server@main
         name: Run ttyd server
+        env:
+          GH_TOKEN: ${{ github.token }}
         with:
           credential: ${{ inputs.ttyd-credential || secrets.TTYD_CREDENTIAL }}
           command: herdr
 
       - uses: zongou/run-vscode-server@main
         name: Run vscode server
+        env:
+          GH_TOKEN: ${{ github.token }}
         with:
           token: ${{ inputs.vscode-server-token || secrets.VSCODE_SERVER_TOKEN }}
 
