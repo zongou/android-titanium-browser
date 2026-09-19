@@ -24,6 +24,18 @@ cargo run build:release
 cargo run install
 ```
 
+### get:upmd
+
+```sh
+VERSION=$(curl -s -S "https://api.github.com/repos/rezigned/upmd/releases" | jq -r .[0].tag_name)
+echo "Downloading upmd ${VERSION}"
+ARCH=$(uname -m)
+URL=https://github.com/rezigned/upmd/releases/download/${VERSION}/upmd-${ARCH}-unknown-linux-gnu.tar.xz
+# curl -L ${URL} | xz -d | tar -t
+curl -L ${URL} | xz -d | tar -C /usr/local/bin --strip-components=1 -x --wildcards "*/upmd"
+upmd --version
+```
+
 ### get:msedit
 
 ```sh
