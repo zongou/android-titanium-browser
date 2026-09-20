@@ -23,7 +23,6 @@ cr patch
 cr configure
 cr setup_ccache
 cr ccache_toolchain_check
-cr ccache_clang_version_check
 cr build
 ```
 
