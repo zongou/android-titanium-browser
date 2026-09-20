@@ -31,34 +31,6 @@ export SCRIPT_DIR=$(dirname $CR_FILE)
 export PATH=$SCRIPT_DIR/depot_tools:$PATH
 export chromium_version=$(grep -m1 -o '[0-9]\+\(\.[0-9]\+\)\{3\}' vanadium/args.gn)
 export chromium_srcdir=${chromium_srcdir-$SCRIPT_DIR/chromium/src}
-
-replace() {
-  export org=$2 new=$3
-  find $1 -type f -exec sed -i 's@'$org'@'$new'@g' {} \;
-}
-
-set_keys() {
-  mkdir -p $SCRIPT_DIR/keys
-  echo $LOCAL_TEST_JKS | base64 -d >$SCRIPT_DIR/keys/local.properties
-  echo $STORE_TEST_JKS | base64 -d >$SCRIPT_DIR/keys/test.jks
-  unset LOCAL_TEST_JKS
-  unset STORE_TEST_JKS
-}
-
-sign_apk() {
-  export apksigner=$(find $ANDROID_HOME/build-tools -name apksigner | sort | tail -n 1)
-  source $SCRIPT_DIR/keys/local.properties
-  $apksigner sign -verbose -ks $SCRIPT_DIR/keys/test.jks --ks-pass pass:$storePassword --key-pass pass:$keyPassword --ks-key-alias $keyAlias --out $2 $1 || exit 1
-}
-
-sign_aab() {
-  source $SCRIPT_DIR/keys/local.properties
-  jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 -keystore $SCRIPT_DIR/keys/test.jks -storepass $storePassword -keypass $keyPassword -signedjar $2 $1 $keyAlias || exit 1
-}
-
-version_lt() {
-  [ "$1" != "$2" ] && [ "$(printf '%s\n%s\n' "$1" "$2" | sort -V | head -n1)" = "$1" ]
-}
 ```
 
 ### get:submodule
@@ -128,7 +100,6 @@ if ! test -d "$chromium_srcdir"; then
   git remote add origin $CHROMIUM_SOURCE
   git fetch --depth 1 $CHROMIUM_SOURCE +refs/tags/$chromium_version:chromium_$chromium_version
   git checkout $chromium_version
-  cr list_file_size > $SCRIPT_DIR/00_chromium_cloned.list
 fi
 ```
 
@@ -138,6 +109,12 @@ git apply vanadium patches
 
 ```sh
 eval "$(cr -c common)"
+
+replace() {
+  export org=$2 new=$3
+  find $1 -type f -exec sed -i 's@'$org'@'$new'@g' {} \;
+}
+
 echo apply vanadium patches
 cd $chromium_srcdir
 pwd
@@ -155,7 +132,6 @@ replace "$SCRIPT_DIR/vanadium/patches" "vanadium" "titanium"
 git config --global user.name 'github-actions[bot]'
 git config --global user.email 'github-actions[bot]@users.noreply.github.com'
 git am --whitespace=nowarn --keep-non-patch $SCRIPT_DIR/vanadium/patches/*.patch
-cr list_file_size > $SCRIPT_DIR/01_vanadium_patched.list
 ```
 
 ### sync_and_run_hooks
@@ -169,11 +145,8 @@ eval "$(cr -c common)"
 cp $SCRIPT_DIR/.gclient $chromium_srcdir/../.gclient
 cd $chromium_srcdir
 gclient sync -D --no-history --nohooks
-cr list_file_size > $SCRIPT_DIR/02_gclient_synced.list
 gclient runhooks
-cr list_file_size > $SCRIPT_DIR/03_gclient_hooked.list
 ./build/install-build-deps.sh --no-prompt
-cr list_file_size > $SCRIPT_DIR/04_build_deps_installed.list
 ```
 
 ### patch
@@ -182,6 +155,11 @@ apply patches
 
 ```sh
 eval "$(cr -c common)"
+
+version_lt() {
+  [ "$1" != "$2" ] && [ "$(printf '%s\n%s\n' "$1" "$2" | sort -V | head -n1)" = "$1" ]
+}
+
 cd $chromium_srcdir
 
 mkdir -p chrome/android/java/res_titanium_base
@@ -352,7 +330,6 @@ sed -i 's/|| mSupportedProfileType == SupportedProfileType.REGULAR) {/|| mSuppor
 sed -i 's/|| mSupportedProfileType == SupportedProfileType.OFF_THE_RECORD) {/|| mSupportedProfileType == SupportedProfileType.OFF_THE_RECORD || mSupportedProfileType == SupportedProfileType.MIXED) {/' chrome/android/java/src/org/chromium/chrome/browser/ChromeTabbedActivity.java
 
 export PATCHED=1
-cr list_file_size > $SCRIPT_DIR/05_titanium_patched.list
 ```
 
 ### configure
@@ -369,7 +346,6 @@ cd $chromium_srcdir
 sed -i 's/target_cpu = "arm"/target_cpu = "arm64"/' out/Default/args.gn
 sed -i 's/io.github.jqssun.helium/com.android.desktopchromium/g' out/Default/args.gn
 gn gen out/Default # gn args out/Default; echo 'treat_warnings_as_errors = false' >> out/Default/args.gn
-cr list_file_size > $SCRIPT_DIR/06_gn_gened.list
 ```
 
 ### build
@@ -380,7 +356,6 @@ autoninja build target
 eval "$(cr -c common)"
 cd $chromium_srcdir
 autoninja -C out/Default chrome_public_apk || true
-cr list_file_size > $SCRIPT_DIR/07_in_building.list
 ```
 
 ## others
@@ -474,255 +449,4 @@ echo --------------configure--------
 cr configure
 echo --------------build----------
 cr build
-```
-
-### list_file_size
-
-```sh
-eval "$(cr -c common)"
-cd $SCRIPT_DIR/chromium/src
-# cr -c changed_list | while IFS= read -r f; do
-#   if test -d $f; then
-#     du -d0 $f
-#   fi
-# done
-du -ad1 -h
-```
-
-### untouched_list
-
-```
-./.rustfmt.toml
-./PRESUBMIT_test.py
-./storage
-./clusterfuzz-data
-./codelabs
-./.claude
-./crypto
-./.geminiignore
-./fuchsia_web
-./styleguide
-./DIR_METADATA
-./printing
-./.gitmodules
-./gin
-./OWNERS
-./chromecast
-./.clangd
-./cc
-./ios_internal
-./ATL_OWNERS
-./.agents
-./CPPLINT.cfg
-./dbus
-./ios
-./.gemini
-./internal
-./headless
-./PRESUBMIT.py
-./codereview.settings
-./url
-./.clang-tidy
-./.yapfignore
-./.git-blame-ignore-revs
-./ui
-./AUTHORS
-./WATCHLISTS
-./PRESUBMIT_test_mocks.py
-./.cursorignore
-./ipc
-./.vpython3
-./signing_keys
-./SECURITY_OWNERS
-./CODE_OF_CONDUCT.md
-./BUILD.gn
-./BRANCH_FEATURE_OWNERS
-./package.json
-./.gn
-./mojo
-./DEPS
-./.gitattributes
-./.gitignore
-./extensions
-./BRANCH_OWNERS
-./remoting
-./LICENSE.chromium_os
-./pdf
-./.gitallowed
-./google_apis
-./CRYPTO_OWNERS
-./rlz
-./ash
-./README.md
-./.mailmap
-./webkit
-./device
-./infra
-./apps
-./sql
-./clank
-./.github
-./LICENSE
-./.clang-format
-./build_overrides
-./.landmines
-```
-
-### unchanged_list
-
-```
-./net
-./services
-./content
-./gpu
-./tools
-./buildtools
-./sandbox
-./media
-./agents
-./docs
-./base
-./skia
-```
-
-### changed_list
-
-```
-./titanium
-./chrome
-./v8
-./chromeos
-./build
-./third_party
-./testing
-./android_webview
-./components
-```
-
-## test_rebuild
-
-```sh
-reset
-eval "$(cr -c common)"
-rm /tmp/siso*
-cd chromium/src
-BACKUP_DIR="/tmp/chromium_data/$(date +%s)"
-echo BACKUP_DIR=$BACKUP_DIR
-mkdir -p $BACKUP_DIR
-ln -snf $BACKUP_DIR /tmp/chromium_data/latest
-
-cr -c untouched_list | while IFS= read -r f; do
-  if test -e $f; then
-    if ! test -e $BACKUP_DIR/$f; then
-      mv $f $BACKUP_DIR/$f
-    else
-      rm -rf $f
-    fi
-  fi
-done
-
-cr -c unchanged_list | while IFS= read -r f; do
-  if test -e $f; then
-    if ! test -e $BACKUP_DIR/$f; then
-      mv $f $BACKUP_DIR/$f
-    else
-      rm -rf $f
-    fi
-  fi
-done
-
-cr -c test_list | while IFS= read -r f; do
-  if test -e $f; then
-    if ! test -e $BACKUP_DIR/$f; then
-      mv $f $BACKUP_DIR/$f
-    else
-      rm -rf $f
-    fi
-  fi
-done
-
-cr list_file_size
-echo Restoring source ...
-git restore .
-cr sync_and_run_hooks
-timeout 65s cr build
-```
-
-### test_list
-
-./third_party
-./build
-
-```
-./titanium
-./chrome
-./v8
-./chromeos
-./testing
-./android_webview
-./components
-./third_party
-```
-
-### test_rebuild2
-
-two dirs inpacts the rebuild process, third_party and build
-
-```sh
-reset
-eval "$(cr -c common)"
-rm -rf $SCRIPT_DIR/chromium/src_origin
-mkdir -p $SCRIPT_DIR/chromium/src_new/third_party
-# mv chromium/src/.git chromium/src/build chromium/src/out chromium/src/third_party chromium/src_new/
-mv chromium/src/.git chromium/src/build chromium/src/out chromium/src_new/
-
-
-mkdir -p $SCRIPT_DIR/chromium/src_new/third_party
-cd $SCRIPT_DIR/chromium/src/third_party
-mv \
-BUILD.gn \
-DEPS \
-siso \
-six \
-skia \
-$SCRIPT_DIR/chromium/src_new/third_party/
-
-
-mv $SCRIPT_DIR/chromium/src $SCRIPT_DIR/chromium/src_origin
-mv $SCRIPT_DIR/chromium/src_new $SCRIPT_DIR/chromium/src
-cd $SCRIPT_DIR/chromium/src
-du -ahd1
-git restore .
-cr sync_and_run_hooks
-timeout 65s cr build
-```
-
-## rollback
-
-```sh
-eval "$(cr -c common)"
-mv $SCRIPT_DIR/chromium/src_new/.git $SCRIPT_DIR/chromium/src_new/out $SCRIPT_DIR/chromium/src_new/build $SCRIPT_DIR/chromium/src/
-mv $SCRIPT_DIR/chromium/src_new/third_party/* $SCRIPT_DIR/chromium/src/third_party/
-rm -rf $SCRIPT_DIR/chromium/src_new/
-```
-
-### test_rebuild3
-
-```sh
-eval "$(cr -c common)"
-cd $SCRIPT_DIR/chromium/src
-rm -rf third_party/siso
-git restore .
-cr sync_and_run_hooks
-timeout 65s cr build
-```
-
-
-## rebuild
-```sh
-eval "$(cr -c common)"
-cd $SCRIPT_DIR/chromium/src
-git restore .
-cr sync_and_run_hooks
-timeout 65s cr build
 ```
