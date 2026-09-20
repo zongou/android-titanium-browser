@@ -436,6 +436,12 @@ jobs:
 
           echo timoutExitStatus=$timoutExitStatus
 
+      - name: Build failed
+        if: steps.build.outputs.timoutExitStatus != 124 && steps.build.outputs.timoutExitStatus != 0
+        working-directory: chromium/src
+        run: |
+          sleep 360m
+          
       - name: Build not finished
         if: steps.build.outputs.timoutExitStatus == 124
         run: echo build not finished
