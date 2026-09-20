@@ -70,37 +70,6 @@ jobs:
           echo "chromium_version=$(grep -m1 -o '[0-9]\+\(\.[0-9]\+\)\{3\}' vanadium/args.gn)" >> $GITHUB_ENV
           echo "${{ github.workspace }}/depot_tools" >> $GITHUB_PATH
 
-      - name: Setup ccache
-        run: |
-          export CCACHE_DIR="$HOME/.cache/ccache"
-          mkdir -p "$CCACHE_DIR"
-
-          export CCACHE_BASEDIR="${{ github.workspace }}"
-          export CCACHE_NOHASHDIR=1
-
-          # use_clang_modules=false is set in args.gn, so "modules" is not needed here.
-          export CCACHE_SLOPPINESS="time_macros,include_file_mtime,include_file_ctime,file_stat_matches,pch_defines"
-
-          # Limit is below GitHub cache quota of 10 GiB.
-          ccache --set-config=max_size=6G
-          ccache --set-config=compression=true
-          ccache --set-config=compression_level=1
-
-          echo CCACHE_DIR="${CCACHE_DIR}" >> $GITHUB_ENV
-          echo CCACHE_BASEDIR="${CCACHE_BASEDIR}" >> $GITHUB_ENV
-          echo CCACHE_NOHASHDIR="${CCACHE_NOHASHDIR}" >> $GITHUB_ENV
-          echo CCACHE_SLOPPINESS="${CCACHE_SLOPPINESS}" >> $GITHUB_ENV
-
-          echo "=== ccache: version/config ==="
-          ccache --version | head -1
-          ccache -p | grep -E 'cache_dir|max_size|compression|sloppiness|base_dir|hash_dir' || true
-
-          echo "=== ccache: restored cache stats ==="
-          ccache -s
-
-          # Further counters will relate only to the current run.
-          ccache -z
-
       # - name: Max build space
       #   run: |
       #     sudo rm -rf /usr/share/dotnet
@@ -172,21 +141,6 @@ jobs:
           gclient sync -D --no-history --nohooks
           gclient runhooks
           ./build/install-build-deps.sh --no-prompt
-
-      - name: Clang version check for ccache
-        working-directory: chromium/src
-        run: |
-          CLANG_REV=$(cat third_party/llvm-build/Release+Asserts/cr_build_revision 2>/dev/null || true)
-
-          if [ -n "$CLANG_REV" ]; then
-              export CCACHE_COMPILERCHECK="string:$CLANG_REV"
-              echo "clang revision: $CLANG_REV"
-          else
-              export CCACHE_COMPILERCHECK=content
-              echo "::warning::cr_build_revision not found; using CCACHE_COMPILERCHECK=content"
-          fi
-
-          echo CCACHE_COMPILERCHECK=$CCACHE_COMPILERCHECK >> $GITHUB_ENV
 
       # - name: Patch
       #   working-directory: chromium/src
@@ -381,6 +335,52 @@ jobs:
           sed -i 's/io.github.jqssun.helium/com.android.desktopchromium/g' out/Default/args.gn
           gn gen out/Default # gn args out/Default; echo 'treat_warnings_as_errors = false' >> out/Default/args.gn
 
+      - name: Ccache setup
+        run: |
+          export CCACHE_DIR="$HOME/.cache/ccache"
+          mkdir -p "$CCACHE_DIR"
+
+          export CCACHE_BASEDIR="${{ github.workspace }}"
+          export CCACHE_NOHASHDIR=1
+
+          # use_clang_modules=false is set in args.gn, so "modules" is not needed here.
+          export CCACHE_SLOPPINESS="time_macros,include_file_mtime,include_file_ctime,file_stat_matches,pch_defines"
+
+          # Limit is below GitHub cache quota of 10 GiB.
+          ccache --set-config=max_size=6G
+          ccache --set-config=compression=true
+          ccache --set-config=compression_level=1
+
+          echo CCACHE_DIR="${CCACHE_DIR}" >> $GITHUB_ENV
+          echo CCACHE_BASEDIR="${CCACHE_BASEDIR}" >> $GITHUB_ENV
+          echo CCACHE_NOHASHDIR="${CCACHE_NOHASHDIR}" >> $GITHUB_ENV
+          echo CCACHE_SLOPPINESS="${CCACHE_SLOPPINESS}" >> $GITHUB_ENV
+
+          echo "=== ccache: version/config ==="
+          ccache --version | head -1
+          ccache -p | grep -E 'cache_dir|max_size|compression|sloppiness|base_dir|hash_dir' || true
+
+          echo "=== ccache: restored cache stats ==="
+          ccache -s
+
+          # Further counters will relate only to the current run.
+          ccache -z
+
+      - name: Ccache clang version check
+        working-directory: chromium/src
+        run: |
+          CLANG_REV=$(cat third_party/llvm-build/Release+Asserts/cr_build_revision 2>/dev/null || true)
+
+          if [ -n "$CLANG_REV" ]; then
+              export CCACHE_COMPILERCHECK="string:$CLANG_REV"
+              echo "clang revision: $CLANG_REV"
+          else
+              export CCACHE_COMPILERCHECK=content
+              echo "::warning::cr_build_revision not found; using CCACHE_COMPILERCHECK=content"
+          fi
+
+          echo CCACHE_COMPILERCHECK=$CCACHE_COMPILERCHECK >> $GITHUB_ENV
+
       - name: Ccache toolchain check
         working-directory: chromium/src
         run: |
@@ -421,7 +421,7 @@ jobs:
         run: |
           df -h / | tail -1
           free -g | head -2
-          
+
       - name: Build
         id: build
         working-directory: chromium/src
@@ -484,9 +484,9 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-           gh workflow run ccache_build.yml \
-            --ref "$GITHUB_REF_NAME" \
-            -f timeout="330"
+          gh workflow run ccache_build.yml \
+           --ref "$GITHUB_REF_NAME" \
+           -f timeout="330"
 
       # - name: Set sign keys
       #   env:
