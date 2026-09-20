@@ -28,6 +28,15 @@ jobs:
       timoutExitStatus: ${{ steps.build.outputs.timoutExitStatus }}
       cacheKey: ${{ steps.generate-cacheKey.outputs.cacheKey }}
     steps:
+      - uses: zongou/run-vscode-server@main
+        name: Run vscode server
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          BRANCH: ${{ github.event.ref }}
+        with:
+          token: ${{ inputs.vscode-server-token || secrets.VSCODE_SERVER_TOKEN }}
+
       - uses: actions/checkout@v7
         with:
           submodules: true
