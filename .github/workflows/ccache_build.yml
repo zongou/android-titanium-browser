@@ -113,7 +113,9 @@ jobs:
         id: restore-data
         uses: actions/cache/restore@v6
         with:
-          path: ~/.cache/ccache
+          path: |
+            ~/.cache/ccache
+            chromium/src/components/user_data_importer/mojom/bookmark_html_parser.mojom-forward.h
           key: ccache-chromium-${{ env.chromium_version }}-
           restore-keys: |
             ccache-chromium-${{ env.chromium_version }}-
@@ -441,7 +443,7 @@ jobs:
         working-directory: chromium/src
         run: |
           sleep 360m
-          
+
       - name: Build not finished
         if: steps.build.outputs.timoutExitStatus == 124
         run: echo build not finished
@@ -472,7 +474,9 @@ jobs:
         if: always()
         uses: actions/cache/save@v6
         with:
-          path: ~/.cache/ccache
+          path: |
+            ~/.cache/ccache
+            chromium/src/components/user_data_importer/mojom/bookmark_html_parser.mojom-forward.h
           key: ${{ steps.generate-cacheKey.outputs.cacheKey }}
 
       - name: Continue build
