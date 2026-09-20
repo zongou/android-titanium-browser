@@ -21,6 +21,9 @@ cr apply_vanadium_patches
 cr sync_and_run_hooks
 cr patch
 cr configure
+cr setup_ccache
+cr ccache_toolchain_check
+cr ccache_clang_version_check
 cr build
 ```
 
@@ -31,6 +34,28 @@ export SCRIPT_DIR=$(dirname $CR_FILE)
 export PATH=$SCRIPT_DIR/depot_tools:$PATH
 export chromium_version=$(grep -m1 -o '[0-9]\+\(\.[0-9]\+\)\{3\}' vanadium/args.gn)
 export chromium_srcdir=${chromium_srcdir-$SCRIPT_DIR/chromium/src}
+
+# Setup ccache
+export CCACHE_DIR="$HOME/.cache/ccache"
+mkdir -p "$CCACHE_DIR"
+
+export CCACHE_BASEDIR="${SCRIPT_DIR}"
+export CCACHE_NOHASHDIR=1
+
+# use_clang_modules=false is set in args.gn, so "modules" is not needed here.
+export CCACHE_SLOPPINESS="time_macros,include_file_mtime,include_file_ctime,file_stat_matches,pch_defines"
+
+if test -c $chromium_srcdir/third_party/llvm-build/Release+Asserts/cr_build_revision; then
+  CLANG_REV=$(cat $chromium_srcdir/third_party/llvm-build/Release+Asserts/cr_build_revision)
+
+  if [ -n "$CLANG_REV" ]; then
+      export CCACHE_COMPILERCHECK="string:$CLANG_REV"
+      echo "clang revision: $CLANG_REV"
+  else
+      export CCACHE_COMPILERCHECK=content
+      echo "::warning::cr_build_revision not found; using CCACHE_COMPILERCHECK=content"
+  fi
+fi
 ```
 
 ### get:submodule
@@ -51,7 +76,7 @@ install dependencies
 ```sh
 export DEBIAN_FRONTEND=noninteractive
 sudo apt-get update
-sudo apt-get install -y sudo lsb-release file nano git curl python3 python3-pillow imagemagick librsvg2-bin
+sudo apt-get install -y sudo lsb-release file nano git curl python3 python3-pillow imagemagick librsvg2-bin ccache
 
 # sudo dpkg --add-architecture i386
 # sudo apt-get update
@@ -346,6 +371,67 @@ cd $chromium_srcdir
 sed -i 's/target_cpu = "arm"/target_cpu = "arm64"/' out/Default/args.gn
 sed -i 's/io.github.jqssun.helium/com.android.desktopchromium/g' out/Default/args.gn
 gn gen out/Default # gn args out/Default; echo 'treat_warnings_as_errors = false' >> out/Default/args.gn
+```
+
+### setup_ccache
+
+```sh
+eval "$(cr -c common)"
+# Limit is below GitHub cache quota of 10 GiB.
+ccache --set-config=max_size=6G
+ccache --set-config=compression=true
+ccache --set-config=compression_level=1
+
+echo "=== ccache: version/config ==="
+ccache --version | head -1
+ccache -p | grep -E 'cache_dir|max_size|compression|sloppiness|base_dir|hash_dir' || true
+
+echo "=== ccache: restored cache stats ==="
+ccache -s
+
+# Further counters will relate only to the current run.
+ccache -z
+```
+
+### ccache_toolchain_check
+
+```sh
+eval "$(cr -c common)"
+
+cd $chromium_srcdir
+
+if ! grep -q 'ccache' out/Default/toolchain.ninja; then
+  echo "::error::ccache is missing from out/Default/toolchain.ninja"
+  grep -m3 -E 'command = .*clang' out/Default/toolchain.ninja || true
+  exit 1
+fi
+
+export CCACHE_LOGFILE=/tmp/ccache-selftest.log
+rm -f "$CCACHE_LOGFILE"
+
+if ninja -C out/Default obj/base/base/values.o; then
+  rm -f out/Default/obj/base/base/values.o
+  ninja -C out/Default obj/base/base/values.o
+
+  unset CCACHE_LOGFILE
+
+  echo "--- self-test statistics ---"
+  ccache -s
+
+  echo "--- ccache results ---"
+  grep -h 'Result:' /tmp/ccache-selftest.log \
+      | sed -E 's/^.*Result: //' \
+      | sort \
+      | uniq -c \
+      | sort -rn \
+      || echo "ccache was not called"
+
+else
+    unset CCACHE_LOGFILE
+    echo "::warning::ccache self-test skipped: values.o failed"
+fi
+
+echo "=== end SELF-TEST ==="
 ```
 
 ### build
