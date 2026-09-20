@@ -1,8 +1,8 @@
 name: Test
 
 on:
-  push:
-    paths: .github/workflows/test.yml
+  # push:
+  #   paths: .github/workflows/test.yml
   workflow_dispatch:
     inputs:
       vscode-server-token:
@@ -63,7 +63,7 @@ jobs:
         uses: actions/cache/restore@v6
         with:
           path: |
-            chromium
+            ~/.cache/ccache
           key: chromium-data-
 
       - name: Keep alive
