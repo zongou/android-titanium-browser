@@ -508,30 +508,12 @@ sudo swapoff -a
 sudo rm -f /mnt/swapfile
 ```
 
-### demo
+### test
 
 ```sh
-cr clean
-(cd chromium/src && git submodule foreach --quiet 'echo "./$sm_path"' > /tmp/list)
-# tar -C chromium/src -cv --exclude-from=/tmp/list ./.git ./v8 ./third_party/search_engines_data/resources | zstd -T0 -v > /tmp/data
-# du -ahd0 /tmp/data
-
-export chromium_srcdir=chromium/src_new
 eval "$(cr -c common)"
-which -a gn
 
-rm -rf chromium/src_new
-mkdir -p chromium/src_new
-tar -C chromium/src -cv ./.git ./v8 ./third_party/search_engines_data/resources | tar -C chromium/src_new -x
-(cd chromium_new/src && git restore .)
+cd $chromium_srcdir
 
-cr get:build_tools
-cr get:depot_tools
-
-echo ----------run hooks----------
-cr sync_and_run_hooks
-echo --------------configure--------
-cr configure
-echo --------------build----------
-cr build
+ninja -C out/Default obj/chrome/browser/bookmarks/android/impl/bookmark_import_export_helper.o
 ```
