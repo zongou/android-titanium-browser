@@ -31,7 +31,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     outputs:
-      timoutExitStatus: ${{ steps.build.outputs.timoutExitStatus }}
+      status: ${{ steps.build.outputs.status }}
       cacheKey: ${{ steps.generate-cacheKey.outputs.cacheKey }}
     steps:
       - uses: zongou/run-vscode-server@main
@@ -428,32 +428,34 @@ jobs:
         working-directory: chromium/src
         run: |
           if timeout ${{  inputs.timeout || 330 }}m autoninja -C out/Default chrome_public_apk; then
-            timoutExitStatus=$?
-            echo timoutExitStatus=$timoutExitStatus >> $GITHUB_OUTPUT
-            echo build finished
+            status=$?
+            echo status=$status
+            echo status=$status >> $GITHUB_OUTPUT
           else
-            timoutExitStatus=$?
-            echo timoutExitStatus=$timoutExitStatus >> $GITHUB_OUTPUT
-            echo build not finished
+            status=$?
+            echo status=$status
+            echo status=$status >> $GITHUB_OUTPUT
+
+            if test $status -ne 124; then
+              exit $status
+            fi
           fi
 
-          echo timoutExitStatus=$timoutExitStatus
-
       - name: Build failed
-        if: steps.build.outputs.timoutExitStatus != 124 && steps.build.outputs.timoutExitStatus != 0
+        if: steps.build.outputs.status != 124 && steps.build.outputs.status != 0
         working-directory: chromium/src
         run: |
           echo build failed
 
       - name: Build timeout
-        if: steps.build.outputs.timoutExitStatus == 124
+        if: steps.build.outputs.status == 124
         run: echo build not finished
 
-      - name: Build in time
-        if: steps.build.outputs.timoutExitStatus == 0
+      - name: Build complete
+        if: steps.build.outputs.status == 0
         working-directory: chromium/src
         run: |
-          echo build finished
+          echo build complete
           cp $(find out/Default/apks -name 'Chrome*.apk') out/tmp/$chromium_version-arm64-v8a.apk
 
       - name: After compilation
@@ -481,7 +483,7 @@ jobs:
           key: ${{ steps.generate-cacheKey.outputs.cacheKey }}
 
       - name: Continue build action
-        if: steps.build.outputs.timoutExitStatus == 124
+        if: steps.build.outputs.status == 124
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
@@ -503,13 +505,13 @@ jobs:
       #     unset STORE_TEST_JKS
 
       - name: Set sign keys
-        if: steps.build.outputs.timoutExitStatus == 0
+        if: steps.build.outputs.status == 0
         run: |
           mkdir -p ${{ github.workspace }}/keys
           curl -Lk https://raw.githubusercontent.com/termux/termux-app/refs/heads/master/app/testkey_untrusted.jks > ${{ github.workspace }}/keys/test.jks
 
       - name: Sign
-        if: steps.build.outputs.timoutExitStatus == 0
+        if: steps.build.outputs.status == 0
         working-directory: chromium/src
         run: |
           export PATH=$PWD/third_party/jdk/current/bin/:$PATH
@@ -524,12 +526,12 @@ jobs:
           rm -rf ${{ github.workspace }}/keys
 
       - name: Set
-        if: steps.build.outputs.timoutExitStatus == 0
+        if: steps.build.outputs.status == 0
         run: |
           mv $(find chromium/src/out/release -name '*arm64-v8a.apk') ${{ env.chromium_version }}-${{ env.timestamp }}-arm64-v8a.apk
 
       - name: Publish
-        if: steps.build.outputs.timoutExitStatus == 0
+        if: steps.build.outputs.status == 0
         uses: softprops/action-gh-release@v2
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -539,7 +541,7 @@ jobs:
             ${{ env.chromium_version }}-${{ env.timestamp }}-arm64-v8a.apk
 
       - name: Attest
-        if: steps.build.outputs.timoutExitStatus == 0
+        if: steps.build.outputs.status == 0
         uses: actions/attest-build-provenance@v4
         with:
           subject-path: |
