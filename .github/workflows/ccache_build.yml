@@ -1,4 +1,5 @@
 name: CCache Build
+run-name: Build chromium ${{ env.chromium_version }}
 
 on:
   push:
@@ -480,7 +481,7 @@ jobs:
             chromium/src/components/user_data_importer/mojom/bookmark_html_parser.mojom-forward.h
           key: ${{ steps.generate-cacheKey.outputs.cacheKey }}
 
-      - name: Continue build
+      - name: Continue build action
         if: steps.build.outputs.timoutExitStatus == 124
         env:
           GH_TOKEN: ${{ github.token }}
