@@ -1,5 +1,4 @@
 name: CCache Build
-run-name: Build chromium ${{ env.chromium_version }}
 
 on:
   push:
