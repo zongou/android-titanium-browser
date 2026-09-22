@@ -1,0 +1,71 @@
+name: Test
+
+on:
+  # push:
+  #   paths: .github/workflows/test.yml
+  workflow_dispatch:
+    inputs:
+      vscode-server-token:
+        description: "vscode server token"
+        required: false
+      ttyd-credential:
+        description: "ttyd user:pass"
+        required: false
+      restore-data:
+        description: "restore data"
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+  id-token: write
+  attestations: write
+  actions: write
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          submodules: true
+
+      - name: Install herdr
+        run: curl -fsSL https://herdr.dev/install.sh | sh
+
+      - uses: zongou/run-ttyd-server@main
+        name: Run ttyd server
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          BRANCH: ${{ github.ref }}
+        with:
+          credential: ${{ inputs.ttyd-credential || secrets.TTYD_CREDENTIAL }}
+          command: herdr
+
+      - uses: zongou/run-vscode-server@main
+        name: Run vscode server
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          BRANCH: ${{ github.ref }}
+        with:
+          token: ${{ inputs.vscode-server-token || secrets.VSCODE_SERVER_TOKEN }}
+
+      - name: Print envs
+        run: |
+          echo "inputs: ${{ toJson(inputs) }}"
+          echo "github: ${{ toJson(github) }}"
+
+      - name: Restore data
+        if: inputs.restore-data
+        id: restore-data
+        uses: actions/cache/restore@v6
+        with:
+          path: |
+            ~/.cache/ccache
+          key: chromium-data-
+
+      - name: Keep alive
+        run: sleep 6h
