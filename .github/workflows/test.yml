@@ -59,13 +59,15 @@ jobs:
           echo "github: ${{ toJson(github) }}"
 
       - name: Restore data
-        if: inputs.restore-data
         id: restore-data
         uses: actions/cache/restore@v6
         with:
           path: |
             ~/.cache/ccache
-          key: chromium-data-
+          key: ccache-chromium-${{ env.chromium_version }}-
+          restore-keys: |
+            ccache-chromium-${{ env.chromium_version }}-
+            ccache-chromium-
 
       - name: Keep alive
         run: sleep 6h

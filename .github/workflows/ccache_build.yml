@@ -90,7 +90,6 @@ jobs:
         with:
           path: |
             ~/.cache/ccache
-            chromium/src/components/user_data_importer/mojom/bookmark_html_parser.mojom-forward.h
           key: ccache-chromium-${{ env.chromium_version }}-
           restore-keys: |
             ccache-chromium-${{ env.chromium_version }}-
@@ -479,7 +478,6 @@ jobs:
         with:
           path: |
             ~/.cache/ccache
-            chromium/src/components/user_data_importer/mojom/bookmark_html_parser.mojom-forward.h
           key: ${{ steps.generate-cacheKey.outputs.cacheKey }}
 
       - name: Continue build action
