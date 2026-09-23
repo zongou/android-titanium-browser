@@ -58,6 +58,10 @@ jobs:
       #     echo "inputs: ${{ toJson(inputs) }}"
       #     echo "github: ${{ toJson(github) }}"
 
+      - name: Print workspace
+        run: |
+          echo "workspace: ${{ github.workspace }}"
+
       - name: Restore data
         id: restore-data
         uses: actions/cache/restore@v6
