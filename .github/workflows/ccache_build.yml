@@ -86,7 +86,7 @@ jobs:
 
       - name: Restore data
         id: restore-data
-        uses: actions/cache/restore@v6.1.0
+        uses: actions/cache/restore@v6
         with:
           path: |
             ~/.cache/ccache
@@ -474,7 +474,7 @@ jobs:
 
       - name: Store ccache cache
         if: always()
-        uses: actions/cache/save@v6.1.0
+        uses: actions/cache/save@v6
         with:
           path: |
             ~/.cache/ccache
