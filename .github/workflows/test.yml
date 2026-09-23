@@ -1,8 +1,8 @@
 name: Test
 
 on:
-  # push:
-  #   paths: .github/workflows/test.yml
+  push:
+    paths: .github/workflows/test.yml
   workflow_dispatch:
     inputs:
       vscode-server-token:
@@ -31,32 +31,32 @@ jobs:
         with:
           submodules: true
 
-      - name: Install herdr
-        run: curl -fsSL https://herdr.dev/install.sh | sh
+      # - name: Install herdr
+      #   run: curl -fsSL https://herdr.dev/install.sh | sh
 
-      - uses: zongou/run-ttyd-server@main
-        name: Run ttyd server
-        env:
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
-          BRANCH: ${{ github.ref }}
-        with:
-          credential: ${{ inputs.ttyd-credential || secrets.TTYD_CREDENTIAL }}
-          command: herdr
+      # - uses: zongou/run-ttyd-server@main
+      #   name: Run ttyd server
+      #   env:
+      #     GH_TOKEN: ${{ github.token }}
+      #     GH_REPO: ${{ github.repository }}
+      #     BRANCH: ${{ github.ref }}
+      #   with:
+      #     credential: ${{ inputs.ttyd-credential || secrets.TTYD_CREDENTIAL }}
+      #     command: herdr
 
-      - uses: zongou/run-vscode-server@main
-        name: Run vscode server
-        env:
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
-          BRANCH: ${{ github.ref }}
-        with:
-          token: ${{ inputs.vscode-server-token || secrets.VSCODE_SERVER_TOKEN }}
+      # - uses: zongou/run-vscode-server@main
+      #   name: Run vscode server
+      #   env:
+      #     GH_TOKEN: ${{ github.token }}
+      #     GH_REPO: ${{ github.repository }}
+      #     BRANCH: ${{ github.ref }}
+      #   with:
+      #     token: ${{ inputs.vscode-server-token || secrets.VSCODE_SERVER_TOKEN }}
 
-      - name: Print envs
-        run: |
-          echo "inputs: ${{ toJson(inputs) }}"
-          echo "github: ${{ toJson(github) }}"
+      # - name: Print envs
+      #   run: |
+      #     echo "inputs: ${{ toJson(inputs) }}"
+      #     echo "github: ${{ toJson(github) }}"
 
       - name: Restore data
         id: restore-data
@@ -64,11 +64,10 @@ jobs:
         with:
           path: |
             ~/.cache/ccache
-          key: ccache-chromium-*-*
+          key: ccache-chromium-
           restore-keys: |
-            ccache-chromium-*-*
-            ccache-chromium-*-
-            ccache-*
+            cccache-chromium-
+            ccache-
 
       - name: Print cache hit
         run: |
@@ -76,5 +75,5 @@ jobs:
           echo "${{ steps.restore-data.outputs.cache-primary-key }}"
           echo "${{ steps.restore-data.outputs.cache-matched-key }}"
 
-      - name: Keep alive
-        run: sleep 6h
+      # - name: Keep alive
+      #   run: sleep 6h
