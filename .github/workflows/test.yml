@@ -64,9 +64,8 @@ jobs:
         with:
           path: |
             ~/.cache/ccache
-          key: ccache-chromium-${{ env.chromium_version }}-
+          key: ccache-chromium-
           restore-keys: |
-            ccache-chromium-${{ env.chromium_version }}-
             ccache-chromium-
 
       - name: Keep alive
