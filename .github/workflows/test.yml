@@ -27,9 +27,9 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
-        with:
-          submodules: true
+      # - uses: actions/checkout@v5
+      #   with:
+      #     submodules: true
 
       # - name: Install herdr
       #   run: curl -fsSL https://herdr.dev/install.sh | sh
