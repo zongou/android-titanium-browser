@@ -67,6 +67,7 @@ jobs:
           key: ccache-chromium-
           restore-keys: |
             ccache-chromium-
+            ccache-
 
       - name: Keep alive
         run: sleep 6h
