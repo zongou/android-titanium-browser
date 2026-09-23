@@ -11,6 +11,11 @@ on:
       ttyd-credential:
         description: "ttyd user:pass"
         required: false
+      cache-key:
+        description: "cache key"
+        required: false
+        default: ccache-chromium-
+        type: string
 
 permissions:
   contents: write
@@ -59,7 +64,7 @@ jobs:
         with:
           path: |
             ~/.cache/ccache
-          key: ccache-chromium-
+          key: ${{ inputs.cache-key || 'ccache-chromium-' }}
           restore-keys: |
             cccache-chromium-
             ccache-
