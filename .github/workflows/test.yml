@@ -64,8 +64,9 @@ jobs:
 
       - name: Restore data
         id: restore-data
-        uses: actions/cache/restore@v6
+        uses: actions/cache/restore@v6.1.0
         with:
+          enableCrossOsArchive: true
           path: |
             ~/.cache/ccache
           key: ${{ inputs.cache-key || 'ccache-chromium-' }}
