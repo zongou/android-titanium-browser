@@ -2,8 +2,8 @@
 
 debug first
 
-[build instruction](https://github.com/chromium/chromium/blob/main/docs/linux/build_instructions.md)
-[ccache mannual](https://ccache.dev/manual/4.14.html#_configuration_value_syntax)
+[build instruction](https:/github.com/chromium/chromium/blob/main/docs/linux/build_instructions.md)
+[ccache mannual](https:/ccache.dev/manual/4.14.html#_configuration_value_syntax)
 
 ## work
 
@@ -30,9 +30,9 @@ cr build
 
 ```SH
 export SCRIPT_DIR=$(dirname $CR_FILE)
-export PATH=${{ github.workspace }}//depot_tools:$PATH
+export PATH=${SCRIPT_DIR}/depot_tools:$PATH
 export chromium_version=$(grep -m1 -o '[0-9]\+\(\.[0-9]\+\)\{3\}' vanadium/args.gn)
-export chromium_srcdir=${chromium_srcdir-${{ github.workspace }}//chromium/src}
+export chromium_srcdir=${chromium_srcdir-${SCRIPT_DIR}/chromium/src}
 
 # Setup ccache
 export CCACHE_DIR="$HOME/.cache/ccache"
@@ -88,7 +88,7 @@ get google depot_tools
 
 ```sh
 if ! test -d depot_tools; then
-  git clone --depth 1 https://chromium.googlesource.com/chromium/tools/depot_tools.git
+  git clone --depth 1 https:/chromium.googlesource.com/chromium/tools/depot_tools.git
 fi
 ```
 
@@ -116,7 +116,7 @@ get chromium source
 
 ```sh
 eval "$(cr -c common)"
-export CHROMIUM_SOURCE=https://github.com/chromium/chromium.git
+export CHROMIUM_SOURCE=https:/github.com/chromium/chromium.git
 if ! test -d "$chromium_srcdir"; then
   mkdir -p $chromium_srcdir
   cd $chromium_srcdir
@@ -142,20 +142,20 @@ replace() {
 echo apply vanadium patches
 cd $chromium_srcdir
 pwd
-# https://grapheneos.org/build#browser-and-webview
-rm -rf ${{ github.workspace }}//vanadium/patches/*trichrome-{apk-build-targets,browser-apk-targets}.patch
-rm -rf ${{ github.workspace }}//vanadium/patches/*{detailed,supported}-language*.patch
-rm -rf ${{ github.workspace }}//vanadium/patches/*javascript-optimizer-{site-setting,settings-UI}.patch
-rm -rf ${{ github.workspace }}//vanadium/patches/*component-updates.patch
-rm -rf ${{ github.workspace }}//vanadium/patches/*{pdf,PDF,for-content-public,toolbar-button,configs-from-config-app,new-tab-card,predictive-back*}*.patch
-# rm -rf ${{ github.workspace }}//vanadium/patches/*crashpad*.patch
+# https:/grapheneos.org/build#browser-and-webview
+rm -rf ${SCRIPT_DIR}/vanadium/patches/*trichrome-{apk-build-targets,browser-apk-targets}.patch
+rm -rf ${SCRIPT_DIR}/vanadium/patches/*{detailed,supported}-language*.patch
+rm -rf ${SCRIPT_DIR}/vanadium/patches/*javascript-optimizer-{site-setting,settings-UI}.patch
+rm -rf ${SCRIPT_DIR}/vanadium/patches/*component-updates.patch
+rm -rf ${SCRIPT_DIR}/vanadium/patches/*{pdf,PDF,for-content-public,toolbar-button,configs-from-config-app,new-tab-card,predictive-back*}*.patch
+# rm -rf ${SCRIPT_DIR}/vanadium/patches/*crashpad*.patch
 
-replace "${{ github.workspace }}//vanadium/patches" "VANADIUM" "TITANIUM"
-replace "${{ github.workspace }}//vanadium/patches" "Vanadium" "Titanium"
-replace "${{ github.workspace }}//vanadium/patches" "vanadium" "titanium"
+replace "${SCRIPT_DIR}/vanadium/patches" "VANADIUM" "TITANIUM"
+replace "${SCRIPT_DIR}/vanadium/patches" "Vanadium" "Titanium"
+replace "${SCRIPT_DIR}/vanadium/patches" "vanadium" "titanium"
 git config --global user.name 'github-actions[bot]'
 git config --global user.email 'github-actions[bot]@users.noreply.github.com'
-git am --whitespace=nowarn --keep-non-patch ${{ github.workspace }}//vanadium/patches/*.patch
+git am --whitespace=nowarn --keep-non-patch ${SCRIPT_DIR}/vanadium/patches/*.patch
 ```
 
 ### sync_and_run_hooks
@@ -166,7 +166,7 @@ this will fetch titanium extension, needed for patch
 
 ```sh
 eval "$(cr -c common)"
-cp ${{ github.workspace }}//.gclient $chromium_srcdir/../.gclient
+cp ${SCRIPT_DIR}/.gclient $chromium_srcdir/../.gclient
 cd $chromium_srcdir
 gclient sync -D --no-history --nohooks
 gclient runhooks
@@ -184,19 +184,17 @@ version_lt() {
   [ "$1" != "$2" ] && [ "$(printf '%s\n%s\n' "$1" "$2" | sort -V | head -n1)" = "$1" ]
 }
 
-cd $chromium_srcdir
-
 mkdir -p chrome/android/java/res_titanium_base
-cp $SCRIPT_DIR/res/drawable/themed_app_icon.xml chrome/android/java/res_titanium_base/drawable/themed_app_icon.xml
-for icon in $(find chrome/android/java/res_titanium_base -type f -name '*.png'); do convert $icon -fill navy -tint 36 $icon && $SCRIPT_DIR/res/icon.sh $icon; done
+cp ${SCRIPT_DIR}/res/drawable/themed_app_icon.xml chrome/android/java/res_titanium_base/drawable/themed_app_icon.xml
+for icon in $(find chrome/android/java/res_titanium_base -type f -name '*.png'); do convert $icon -fill navy -tint 36 $icon && ${SCRIPT_DIR}/res/icon.sh $icon; done
 sed -i 's|<application |<application android:extractNativeLibs="false" |' chrome/android/java/AndroidManifest.xml
 sed -i 's|<data android:mimeType="message/rfc822"/>|<data android:mimeType="message/rfc822"/><data android:mimeType="application/pdf"/>|' chrome/android/java/AndroidManifest.xml
 sed -i '/com.google.ar.core.min_apk_version/d' third_party/arcore-android-sdk-client/AndroidManifest_basesplit.xml
 # sed -i 's|Google LLC|jqssun, Google LLC|' chrome/browser/ui/android/strings/android_chrome_strings.grd
 
-cp -r $SCRIPT_DIR/extensions/dist titanium/
-cp $SCRIPT_DIR/extensions/stage_bundled_extensions.inc titanium/dist/
-sed -i 's|"//components/privacy_sandbox/privacy_sandbox_attestations/preload:privacy_sandbox_attestations_assets",|&"//titanium/dist:extension_assets",|' chrome/android/BUILD.gn
+cp -r ${SCRIPT_DIR}/extensions/dist titanium/
+cp ${SCRIPT_DIR}/extensions/stage_bundled_extensions.inc titanium/dist/
+sed -i 's|"/components/privacy_sandbox/privacy_sandbox_attestations/preload:privacy_sandbox_attestations_assets",|&"/titanium/dist:extension_assets",|' chrome/android/BUILD.gn
 sed -i 's|if (!base::PathService::Get(base::DIR_MODULE, \&cur)) {|if (!base::PathService::Get(chrome::DIR_USER_DATA, \&cur)) {|' chrome/common/chrome_paths.cc
 sed -i 's|#include "extensions/buildflags/buildflags.h"|&\n#include "titanium/dist/stage_bundled_extensions.inc"|' chrome/browser/extensions/external_pref_loader.cc
 sed -i 's|ReadStandaloneExtensionPrefFiles(prefs);|&StageBundledExtensions(base_path_id_, base_path_, prefs);|' chrome/browser/extensions/external_pref_loader.cc
@@ -360,7 +358,7 @@ eval "$(cr -c common)"
 mkdir -p $chromium_srcdir/out/Default
 mkdir -p $chromium_srcdir/out/tmp
 mkdir -p $chromium_srcdir/out/release
-cp ${{ github.workspace }}//args.gn $chromium_srcdir/out/Default/args.gn
+cp ${SCRIPT_DIR}/args.gn $chromium_srcdir/out/Default/args.gn
 cd $chromium_srcdir
 sed -i 's/target_cpu = "arm"/target_cpu = "arm64"/' out/Default/args.gn
 sed -i 's/io.github.jqssun.helium/com.android.desktopchromium/g' out/Default/args.gn
@@ -414,7 +412,7 @@ if ninja -C out/Default obj/base/base/values.o; then
 
   echo "--- ccache results ---"
   grep -h 'Result:' /tmp/ccache-selftest.log \
-      | sed -E 's/^.*Result: //' \
+      | sed -E 's/^.*Result: /' \
       | sort \
       | uniq -c \
       | sort -rn \
@@ -455,7 +453,7 @@ eval "$(cr -c common)"
   #   git clean -xdf
 )
 (
-  cd ${{ github.workspace }}//vanadium
+  cd ${SCRIPT_DIR}/vanadium
   git reset --hard
 )
 ```
