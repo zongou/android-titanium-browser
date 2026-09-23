@@ -64,7 +64,7 @@ jobs:
 
       - name: Restore data
         id: restore-data
-        uses: actions/cache/restore@v6.1.0
+        uses: actions/cache/restore@v6
         with:
           enableCrossOsArchive: true
           path: |
