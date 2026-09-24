@@ -66,7 +66,7 @@ jobs:
         id: restore-data
         uses: actions/cache/restore@v6
         with:
-          enableCrossOsArchive: true
+          fail-on-cache-miss: true
           path: |
             ~/.cache/ccache
           key: ${{ inputs.cache-key || 'ccache-chromium-' }}
@@ -76,9 +76,9 @@ jobs:
 
       - name: Print cache hit
         run: |
-          echo "${{ steps.restore-data.outputs.cache-hit }}"
-          echo "${{ steps.restore-data.outputs.cache-primary-key }}"
-          echo "${{ steps.restore-data.outputs.cache-matched-key }}"
+          echo "cache-hit=${{ steps.restore-data.outputs.cache-hit }}"
+          echo "cache-primary-key=${{ steps.restore-data.outputs.cache-primary-key }}"
+          echo "cache-matched-key=${{ steps.restore-data.outputs.cache-matched-key }}"
 
       # - name: Keep alive
       #   run: sleep 6h
