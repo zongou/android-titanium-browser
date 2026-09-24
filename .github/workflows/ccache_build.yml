@@ -97,9 +97,9 @@ jobs:
 
       - name: Print cache hit
         run: |
-          echo "${{ steps.restore-data.outputs.cache-hit }}"
-          echo "${{ steps.restore-data.outputs.cache-primary-key }}"
-          echo "${{ steps.restore-data.outputs.cache-matched-key }}"
+          echo "cache-primary-key=${{ steps.restore-data.outputs.cache-primary-key }}"
+          echo "cache-hit=${{ steps.restore-data.outputs.cache-hit }}"
+          echo "cache-matched-key=${{ steps.restore-data.outputs.cache-matched-key }}"
 
       - name: Get depot_tools
         run: |

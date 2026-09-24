@@ -1,8 +1,8 @@
 name: Test
 
 on:
-  push:
-    paths: .github/workflows/test.yml
+  # push:
+  #   paths: .github/workflows/test.yml
   workflow_dispatch:
     inputs:
       vscode-server-token:
@@ -76,8 +76,8 @@ jobs:
 
       - name: Print cache hit
         run: |
-          echo "cache-hit=${{ steps.restore-data.outputs.cache-hit }}"
           echo "cache-primary-key=${{ steps.restore-data.outputs.cache-primary-key }}"
+          echo "cache-hit=${{ steps.restore-data.outputs.cache-hit }}"
           echo "cache-matched-key=${{ steps.restore-data.outputs.cache-matched-key }}"
 
       # - name: Keep alive
