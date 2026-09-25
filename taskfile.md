@@ -88,7 +88,7 @@ get google depot_tools
 
 ```sh
 if ! test -d depot_tools; then
-  git clone --depth 1 https:/chromium.googlesource.com/chromium/tools/depot_tools.git
+  git clone --depth 1 https://chromium.googlesource.com/chromium/tools/depot_tools.git
 fi
 ```
 
