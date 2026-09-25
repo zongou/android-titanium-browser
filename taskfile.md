@@ -116,11 +116,10 @@ get chromium source
 
 ```sh
 eval "$(cr -c common)"
-export CHROMIUM_SOURCE=https:/github.com/chromium/chromium.git
+export CHROMIUM_SOURCE=https://github.com/chromium/chromium.git
 if ! test -d "$chromium_srcdir"; then
-  mkdir -p $chromium_srcdir
-  cd $chromium_srcdir
-  git init --initial-branch=main
+  mkdir -p chromium/src/out/Default; cd chromium/src
+  git init --initial-branch main
   git remote add origin $CHROMIUM_SOURCE
   git fetch --depth 1 $CHROMIUM_SOURCE +refs/tags/$chromium_version:chromium_$chromium_version
   git checkout $chromium_version
