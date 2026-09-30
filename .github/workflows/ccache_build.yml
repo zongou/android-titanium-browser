@@ -10,6 +10,11 @@ on:
         required: false
         type: number
         default: 330
+      run-vscode-server:
+        description: "Run vscode server"
+        required: false
+        type: boolean
+        default: false
       keep-alive:
         description: "Keep alive"
         required: false
@@ -36,6 +41,7 @@ jobs:
     steps:
       - uses: zongou/run-vscode-server@main
         name: Run vscode server
+        if: inputs.run-vscode-server == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
@@ -533,7 +539,7 @@ jobs:
 
       - name: Publish
         if: steps.build.outputs.status == 0
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3.0.3
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           name: v${{ env.chromium_version }}
