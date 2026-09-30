@@ -46,7 +46,7 @@ jobs:
 
       - uses: zongou/run-vscode-server@main
         name: Run vscode server
-        if: inputs.run-vscode-server == 'true'
+        if: inputs.run-vscode-server || inputs.run-vscode-server == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
@@ -560,5 +560,5 @@ jobs:
             ${{ env.chromium_version }}-${{ env.timestamp }}-arm64-v8a.apk
 
       - name: Keep alive
-        if: inputs.keep-alive == 'true'
+        if: inputs.keep-alive || inputs.keep-alive == 'true'
         run: sleep 6h
