@@ -99,13 +99,14 @@ update vanadium version
 ```sh
 cd vanadium
 git fetch --tags
-git checkout $(git tag | sort -V | tail -n1)
+latest_tag=$(git tag | sort -V | tail -n1)
+git checkout $latest_tag
 cd ..
 git add vanadium
 git config --global user.name 'github-actions[bot]'
 git config --global user.email 'github-actions[bot]@users.noreply.github.com'
 if ! git diff --staged --quiet; then
-  git commit -am "update"
+  git commit -am "update to $latest_tag"
   git push
 fi
 ```
