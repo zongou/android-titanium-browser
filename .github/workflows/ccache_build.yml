@@ -39,6 +39,11 @@ jobs:
       status: ${{ steps.build.outputs.status }}
       cacheKey: ${{ steps.generate-cacheKey.outputs.cacheKey }}
     steps:
+      - name: Print envs
+        run: |
+          echo "inputs: ${{ toJson(inputs) }}"
+          echo "github: ${{ toJson(github) }}"
+
       - uses: zongou/run-vscode-server@main
         name: Run vscode server
         if: inputs.run-vscode-server == 'true'
@@ -101,12 +106,11 @@ jobs:
             ccache-chromium-${{ env.chromium_version }}-
             ccache-chromium-
 
-      - name: Print debug info
+      - name: Print cache hit status
         run: |
           echo "cache-primary-key=${{ steps.restore-data.outputs.cache-primary-key }}"
           echo "cache-hit=${{ steps.restore-data.outputs.cache-hit }}"
           echo "cache-matched-key=${{ steps.restore-data.outputs.cache-matched-key }}"
-          echo "${{ fromJson(inputs) }}"
 
       - name: Get depot_tools
         run: |
