@@ -101,11 +101,12 @@ jobs:
             ccache-chromium-${{ env.chromium_version }}-
             ccache-chromium-
 
-      - name: Print cache hit
+      - name: Print debug info
         run: |
           echo "cache-primary-key=${{ steps.restore-data.outputs.cache-primary-key }}"
           echo "cache-hit=${{ steps.restore-data.outputs.cache-hit }}"
           echo "cache-matched-key=${{ steps.restore-data.outputs.cache-matched-key }}"
+          echo "${{ fromJson(inputs) }}"
 
       - name: Get depot_tools
         run: |
