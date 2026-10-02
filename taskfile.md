@@ -180,12 +180,11 @@ apply patches
 
 ```sh
 eval "$(cr -c common)"
+cd "${chromium_srcdir}"
 
 version_lt() {
   [ "$1" != "$2" ] && [ "$(printf '%s\n%s\n' "$1" "$2" | sort -V | head -n1)" = "$1" ]
 }
-
-#!/bin/bash
 
 mkdir -p chrome/android/java/res_titanium_base
 cp $SCRIPT_DIR/res/drawable/themed_app_icon.xml chrome/android/java/res_titanium_base/drawable/themed_app_icon.xml
