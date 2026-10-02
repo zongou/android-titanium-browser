@@ -417,11 +417,11 @@ if ninja -C out/Default obj/base/base/values.o; then
 
   echo "--- ccache results ---"
   grep -h 'Result:' /tmp/ccache-selftest.log \
-      | sed -E 's/^.*Result: /' \
-      | sort \
-      | uniq -c \
-      | sort -rn \
-      || echo "ccache was not called"
+    | sed -E 's/^.*Result: //' \
+    | sort \
+    | uniq -c \
+    | sort -rn \
+    || echo "ccache was not called"
 
 else
     unset CCACHE_LOGFILE
