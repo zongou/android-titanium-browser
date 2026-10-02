@@ -48,11 +48,11 @@ if test -c $chromium_srcdir/third_party/llvm-build/Release+Asserts/cr_build_revi
   CLANG_REV=$(cat $chromium_srcdir/third_party/llvm-build/Release+Asserts/cr_build_revision)
 
   if [ -n "$CLANG_REV" ]; then
-      export CCACHE_COMPILERCHECK="string:$CLANG_REV"
-      echo "clang revision: $CLANG_REV"
+    export CCACHE_COMPILERCHECK="string:$CLANG_REV"
+    echo "clang revision: $CLANG_REV"
   else
-      export CCACHE_COMPILERCHECK=content
-      echo "::warning::cr_build_revision not found; using CCACHE_COMPILERCHECK=content"
+    export CCACHE_COMPILERCHECK=content
+    echo "::warning::cr_build_revision not found; using CCACHE_COMPILERCHECK=content"
   fi
 fi
 ```
