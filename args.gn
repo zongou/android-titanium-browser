@@ -6,7 +6,7 @@ is_component_build = false
 is_debug = false
 is_official_build = true
 
-# --- КРИТИЧНО ДЛЯ CCACHE И СКОРОСТИ СБОРКИ ---
+# --- CRITICAL FOR CCACHE AND BUILD SPEED ---
 cc_wrapper = "ccache"
 clang_use_chrome_plugins = false
 use_clang_modules = false
