@@ -1,21 +1,21 @@
 #!/usr/bin/env bash
-# Кастомные патчи Titanium (накладываются ПОСЛЕ upstream patch.sh).
-# 1. Минцифры root CA, ограниченный зонами .ru / .xn--p1ai (.рф) / .su.
-# 2. Исправление GN-зависимости bookmark_import_export_helper -> mojom.
-# 3. Сохранение попапа расширений и WebContents при системном выборе файлов (Issue #252).
+# Custom Titanium patches (applied AFTER upstream patch.sh).
+# 1. Ministry of Digital Development root CA, restricted to .ru / .xn--p1ai (.рф) / .su zones.
+# 2. Fix GN dependency bookmark_import_export_helper -> mojom.
+# 3. Preserve extension popup and WebContents during system file picker (Issue #252).
 #
-# ВАЖНО: этот файл отдельный, чтобы patch.sh можно было обновлять копированием
-# из upstream без повторного вклеивания блока Минцифры.
+# IMPORTANT: this file is separate so that patch.sh can be updated by copying
+# from upstream without re-inserting the Ministry of Digital Development block.
 
 set -euo pipefail
 
-echo "=== [custom] Патч Минцифры CA (scoped .ru, .xn--p1ai, .su) ==="
+echo "=== [custom] Ministry of Digital Development CA patch (scoped .ru, .xn--p1ai, .su) ==="
 
 python3 - << 'EOF'
 import base64, hashlib
 from pathlib import Path
 
-# Сертификат Минцифры (Russian Trusted Root CA), DER.
+# Ministry of Digital Development certificate (Russian Trusted Root CA), DER.
 # SHA-256: d26d2d0231b7c39f92cc738512ba54103519e4405d68b5bd703e9788ca8ecf31
 ca_b64 = (
     "MIIFwjCCA6qgAwIBAgICEAAwDQYJKoZIhvcNAQELBQAwcDELMAkGA1UEBhMCUlUxPzA9BgNVBAoM"
@@ -49,33 +49,33 @@ ca_b64 = (
 der_bytes = base64.b64decode(ca_b64)
 assert hashlib.sha256(der_bytes).hexdigest() == \
     "d26d2d0231b7c39f92cc738512ba54103519e4405d68b5bd703e9788ca8ecf31", \
-    "SHA-256 сертификата не совпал — base64 повреждён"
+    "Certificate SHA-256 mismatch — base64 is corrupted"
 
-# Ряды по 12 байт: компактно и читаемо.
+# Rows of 12 bytes: compact and readable.
 rows = []
 for i in range(0, len(der_bytes), 12):
     rows.append("    " + ", ".join(f"0x{b:02x}" for b in der_bytes[i:i + 12]) + ",")
 der_array = "\n".join(rows)
 
 targets = list(Path(".").rglob("profile_network_context_service.cc"))
-assert targets, "profile_network_context_service.cc не найден — патч Минцифры некуда применить"
+assert targets, "profile_network_context_service.cc not found — nowhere to apply Ministry of Digital Development patch"
 
 for target in targets:
     content = target.read_text(encoding="utf-8")
 
     if "kRussianTrustedRootCaDer" in content:
-        print(f"[custom] Уже пропатчено, пропускаю: {target}")
+        print(f"[custom] Already patched, skipping: {target}")
         continue
 
     anchor_def = "bool IsValidDNSConstraint(std::string_view possible_dns_constraint) {"
     anchor_use = ("auto additional_certificates =\n"
                   "      cert_verifier::mojom::AdditionalCertificates::New();")
 
-    # Громкий отказ лучше тихой сборки без корневого сертификата.
+    # Loud failure is better than a silent build without the root certificate.
     assert anchor_def in content, \
-        f"[custom] Анкер определения не найден в {target} — версия Chromium изменилась"
+        f"[custom] Definition anchor not found in {target} — Chromium version has changed"
     assert anchor_use in content, \
-        f"[custom] Анкер вставки не найден в {target} — версия Chromium изменилась"
+        f"[custom] Insertion anchor not found in {target} — Chromium version has changed"
 
     def_code = f"""
 #if BUILDFLAG(IS_ANDROID)
@@ -94,7 +94,7 @@ constexpr uint8_t kRussianTrustedRootCaDer[] = {{
   russian_trusted_root->certificate = std::vector<uint8_t>(
       kRussianTrustedRootCaDer,
       kRussianTrustedRootCaDer + sizeof(kRussianTrustedRootCaDer));
-  // Ведущая точка = только поддомены и сам домен этой зоны.
+  // Leading dot = only subdomains and the domain itself of this zone.
   russian_trusted_root->permitted_dns_names = {".ru", ".xn--p1ai", ".su"};
   additional_certificates->trust_anchors_with_additional_constraints.push_back(
       std::move(russian_trusted_root));
@@ -103,14 +103,14 @@ constexpr uint8_t kRussianTrustedRootCaDer[] = {{
 """
     content = content.replace(anchor_use, anchor_use + "\n" + use_code)
 
-    assert content.count("kRussianTrustedRootCaDer") >= 3, "[custom] Вставка не удалась"
-    assert '".xn--p1ai"' in content, "[custom] Ограничение .рф не вставлено"
+    assert content.count("kRussianTrustedRootCaDer") >= 3, "[custom] Insertion failed"
+    assert '".xn--p1ai"' in content, "[custom] .рф restriction not inserted"
 
     target.write_text(content, encoding="utf-8")
-    print(f"[custom] Патч Минцифры применён к {target} (.ru, .xn--p1ai, .su)")
+    print(f"[custom] Ministry of Digital Development patch applied to {target} (.ru, .xn--p1ai, .su)")
 EOF
 
-echo "=== [custom] Исправление GN-зависимости bookmark_import_export_helper -> user_data_importer mojom ==="
+echo "=== [custom] Fix GN dependency bookmark_import_export_helper -> user_data_importer mojom ==="
 
 python3 - << 'EOF'
 from pathlib import Path
@@ -125,35 +125,35 @@ for gn_file in gn_files:
     if target in content:
         content = content.replace(target, target + '\n    "//components/user_data_importer/mojom",')
         gn_file.write_text(content, encoding="utf-8")
-        print(f"[custom] Добавлена зависимость //components/user_data_importer/mojom в {gn_file}")
+        print(f"[custom] Added dependency //components/user_data_importer/mojom to {gn_file}")
     else:
-        print(f"[custom] Предупреждение: {target} не найден в {gn_file}")
+        print(f"[custom] Warning: {target} not found in {gn_file}")
 EOF
 
-echo "=== [custom] Исправление закрытия попапа расширений при выборе файла (Issue #252) ==="
+echo "=== [custom] Fix extension popup closing on file picker (Issue #252) ==="
 
 python3 - << 'EOF'
 import re
 from pathlib import Path
 
-# 1. Патчим ExtensionActionPopup.java
+# 1. Patch ExtensionActionPopup.java
 popup_files = list(Path(".").rglob("ExtensionActionPopup.java"))
-assert popup_files, "ExtensionActionPopup.java не найден"
+assert popup_files, "ExtensionActionPopup.java not found"
 
 for popup_file in popup_files:
     content = popup_file.read_text(encoding="utf-8")
     if "mIsIntentActive" in content:
-        print(f"[custom] ExtensionActionPopup.java уже пропатчен: {popup_file}")
+        print(f"[custom] ExtensionActionPopup.java already patched: {popup_file}")
         continue
 
-    # Добавляем поле mIsIntentActive и геттер
+    # Add mIsIntentActive field and getter
     content, n1 = re.subn(
         r'(private\s+final\s+ContentView\s+mContentView;)',
         r'\1\n    private boolean mIsIntentActive;\n\n    public boolean isIntentActive() {\n        return mIsIntentActive;\n    }',
         content
     )
 
-    # Создаём mPopupWindowAndroid до setDelegates и передаём его в webContents.setDelegates
+    # Create mPopupWindowAndroid before setDelegates and pass it to webContents.setDelegates
     replacement_window = '''mPopupWindowAndroid =
                 new ActivityWindowAndroid(
                         activity,
@@ -239,7 +239,7 @@ for popup_file in popup_files:
     pattern_window = r'''webContents\.setDelegates\(\s*VersionInfo\.getProductVersion\(\),\s*ViewAndroidDelegate\.createBasicDelegate\(mContentView\),\s*mContentView,\s*windowAndroid,\s*WebContents\.createDefaultInternalsHolder\(\)\);(\s*\{[^\}]+\}\s*)?mPopupWindowAndroid\s*=\s*new\s+ActivityWindowAndroid\s*\([^;]+?getModalDialogManager\(\)\s*\{[^}]+?\}[^;]*?\};'''
     content, n2 = re.subn(pattern_window, replacement_window, content, flags=re.DOTALL)
 
-    # Блокируем закрытие AnchoredPopupWindow при активном выборе файла
+    # Block AnchoredPopupWindow dismissal when file picker is active
     pattern_popup = r'mPopupWindow\s*=\s*new\s+AnchoredPopupWindow\s*\([^;]+?new\s+ViewRectProvider\(anchorView\)\);'
     replacement_popup = '''mPopupWindow =
                 new AnchoredPopupWindow(
@@ -259,7 +259,7 @@ for popup_file in popup_files:
 
     content, n3 = re.subn(pattern_popup, replacement_popup, content, flags=re.DOTALL)
 
-    # Защита в mCurrentTabObserver
+    # Guard in mCurrentTabObserver
     pattern_tab_observer = r'mCurrentTabObserver\s*=\s*tab\s*->\s*\{[^;]+?mPopupWindow\.dismiss\(\);\s*\}\s*\};'
     replacement_tab_observer = '''mCurrentTabObserver =
                 tab -> {
@@ -269,24 +269,24 @@ for popup_file in popup_files:
                 };'''
     content, n4 = re.subn(pattern_tab_observer, replacement_tab_observer, content, flags=re.DOTALL)
 
-    # В destroy() сбрасываем флаг
+    # Reset flag in destroy()
     pattern_destroy = r'(public\s+void\s+destroy\(\)\s*\{[^}]+?removeObserver\(mCurrentTabObserver\);)'
     content, n5 = re.subn(pattern_destroy, r'\1\n        mIsIntentActive = false;', content, flags=re.DOTALL)
 
     assert n1 == 1 and n2 == 1 and n3 == 1 and n4 == 1 and n5 == 1, \
-        f"[custom] Ошибка наложения патча на {popup_file}: n1={n1}, n2={n2}, n3={n3}, n4={n4}, n5={n5}"
+        f"[custom] Error applying patch to {popup_file}: n1={n1}, n2={n2}, n3={n3}, n4={n4}, n5={n5}"
 
     popup_file.write_text(content, encoding="utf-8")
-    print(f"[custom] Патч сохранения попапа расширений при выборе файла применён к {popup_file}")
+    print(f"[custom] Extension popup preservation patch applied to {popup_file}")
 
-# 2. Патчим ExtensionActionListMediator.java (предотвращаем уничтожение попапа при onDismiss во время выбора файла)
+# 2. Patch ExtensionActionListMediator.java (prevent popup destruction on onDismiss during file picker)
 mediator_files = list(Path(".").rglob("ExtensionActionListMediator.java"))
-assert mediator_files, "ExtensionActionListMediator.java не найден"
+assert mediator_files, "ExtensionActionListMediator.java not found"
 
 for mediator_file in mediator_files:
     content = mediator_file.read_text(encoding="utf-8")
     if "isIntentActive" in content:
-        print(f"[custom] ExtensionActionListMediator.java уже пропатчен: {mediator_file}")
+        print(f"[custom] ExtensionActionListMediator.java already patched: {mediator_file}")
         continue
 
     pattern_mediator = r'(ActionState\.PopupActive\s+actionState\s*=\s*\(ActionState\.PopupActive\)\s*mActionState;)'
@@ -296,10 +296,10 @@ for mediator_file in mediator_files:
         }'''
 
     content, nm = re.subn(pattern_mediator, replacement_mediator, content)
-    assert nm == 1, f"[custom] Не удалось вставить проверку isIntentActive в {mediator_file}"
+    assert nm == 1, f"[custom] Failed to insert isIntentActive check into {mediator_file}"
 
     mediator_file.write_text(content, encoding="utf-8")
-    print(f"[custom] Патч ExtensionActionListMediator применён к {mediator_file}")
+    print(f"[custom] ExtensionActionListMediator patch applied to {mediator_file}")
 EOF
 
-echo "=== [custom] Готово ==="
+echo "=== [custom] Done ==="

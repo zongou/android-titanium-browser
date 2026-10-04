@@ -17,7 +17,7 @@ set_keys() {
 
 ensure_keystore() {
     if [ ! -s "$SCRIPT_DIR/keys/test.jks" ] || [ ! -s "$SCRIPT_DIR/keys/local.properties" ]; then
-        echo "=== Секреты для подписи не заданы: создаём тестовый keystore ==="
+        echo "=== Signing secrets not set: creating test keystore ==="
         mkdir -p "$SCRIPT_DIR/keys"
         keytool -genkeypair -v \
             -keystore "$SCRIPT_DIR/keys/test.jks" \

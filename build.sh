@@ -11,7 +11,7 @@ export DEBIAN_FRONTEND=noninteractive
 
 echo "=== Target Chromium Version: $VERSION | CPUs: $(nproc) | $(date) ==="
 
-# ─── APT зависимости ───────────────────────────────────────────────────────
+# ─── APT dependencies ──────────────────────────────────────────────────────
 sudo apt-get update
 sudo apt-get install -y --no-install-recommends \
     lsb-release \
@@ -37,7 +37,7 @@ export CCACHE_BASEDIR="$SCRIPT_DIR"
 export CCACHE_NOHASHDIR=1
 export CCACHE_SLOPPINESS="time_macros,include_file_mtime,include_file_ctime,file_stat_matches,pch_defines"
 
-# Лимит меньше GitHub cache quota 10 GiB.
+# Limit is below the GitHub cache quota of 10 GiB.
 ccache --set-config=max_size=6G
 ccache --set-config=compression=true
 ccache --set-config=compression_level=1
@@ -49,7 +49,7 @@ ccache -p | grep -E 'cache_dir|max_size|compression|sloppiness|base_dir|hash_dir
 echo "=== ccache: restored cache stats ==="
 ccache -s
 
-# Дальнейшие счётчики будут относиться только к текущему запуску.
+# Further counters will relate only to the current run.
 ccache -z
 
 # ─── depot_tools ───────────────────────────────────────────────────────────
@@ -67,7 +67,7 @@ git checkout "$VERSION"
 
 cp "$SCRIPT_DIR/.gclient" ../.gclient
 
-# ─── Патчи Vanadium -> Titanium ────────────────────────────────────────────
+# ─── Vanadium -> Titanium patches ──────────────────────────────────────────
 # https://grapheneos.org/build#browser-and-webview
 rm -rf "$SCRIPT_DIR"/vanadium/patches/*trichrome-{apk-build-targets,browser-apk-targets}.patch
 rm -rf "$SCRIPT_DIR"/vanadium/patches/*{detailed,supported}-language*.patch
@@ -80,10 +80,10 @@ replace "$SCRIPT_DIR/vanadium/patches" "VANADIUM" "TITANIUM"
 replace "$SCRIPT_DIR/vanadium/patches" "Vanadium" "Titanium"
 replace "$SCRIPT_DIR/vanadium/patches" "vanadium" "titanium"
 
-# Без -3: replace меняет blob-хеши в заголовках патчей и git am -3 падает
-# с "sha1 information is lacking or useless".
+# Without -3: replace changes blob hashes in patch headers and git am -3 fails
+# with "sha1 information is lacking or useless".
 if ! git am --whitespace=nowarn --keep-non-patch "$SCRIPT_DIR"/vanadium/patches/*.patch; then
-    echo "::error::Патчи Vanadium не применились"
+    echo "::error::Vanadium patches failed to apply"
     git am --show-current-patch=diff | head -40 || true
     exit 1
 fi
@@ -95,7 +95,7 @@ gclient runhooks
 
 ./build/install-build-deps.sh --no-prompt
 
-# ─── Проверка версии Clang для ccache ──────────────────────────────────────
+# ─── Clang version check for ccache ────────────────────────────────────────
 CLANG_REV=$(cat third_party/llvm-build/Release+Asserts/cr_build_revision 2>/dev/null || true)
 
 if [ -n "$CLANG_REV" ]; then
@@ -103,16 +103,16 @@ if [ -n "$CLANG_REV" ]; then
     echo "clang revision: $CLANG_REV"
 else
     export CCACHE_COMPILERCHECK=content
-    echo "::warning::cr_build_revision не найден; используется CCACHE_COMPILERCHECK=content"
+    echo "::warning::cr_build_revision not found; using CCACHE_COMPILERCHECK=content"
 fi
 
 # ─── GN ───────────────────────────────────────────────────────────────────
 echo "=== STAGE: gn gen $(date) ==="
 
-# upstream patch.sh рассчитан на запуск БЕЗ set -e: отсутствующая цель sed там
-# не роняет сборку. Если это сделать фатальным, любая мелочь убьёт прогон
-# через 10 минут. Поэтому: ловим ошибки как предупреждение, но требуем,
-# чтобы скрипт дошёл до конца (в конце upstream выставляет PATCHED=1).
+# upstream patch.sh is designed to run WITHOUT set -e: a missing sed target there
+# does not abort the build. Making this fatal would kill the run over any minor
+# issue after 10 minutes. Therefore: catch errors as warnings, but require the
+# script to reach the end (upstream sets PATCHED=1 at the end).
 set +e
 source "$SCRIPT_DIR/patch.sh" > /tmp/patch.log 2>&1
 patch_rc=$?
@@ -120,34 +120,34 @@ set -e
 tail -40 /tmp/patch.log
 
 if [ "$patch_rc" -ne 0 ]; then
-    echo "::warning::patch.sh вернул код $patch_rc"
+    echo "::warning::patch.sh returned exit code $patch_rc"
 fi
 
 if [ "${PATCHED:-0}" != "1" ]; then
-    echo "::error::patch.sh не дошёл до конца (PATCHED != 1) — патчи Titanium применены не полностью"
+    echo "::error::patch.sh did not reach the end (PATCHED != 1) — Titanium patches were not fully applied"
     exit 1
 fi
 
 if grep -q "No such file or directory" /tmp/patch.log; then
-    echo "::warning::Часть целей sed не найдена в этой версии Chromium:"
+    echo "::warning::Some sed targets were not found in this Chromium version:"
     grep -oE "[^ :]+: No such file or directory" /tmp/patch.log | sort -u | head -20
 fi
 
-# Наш патч Минцифры: тут ошибка должна быть фатальной.
+# Our Ministry of Digital Development patch: here the error must be fatal.
 source "$SCRIPT_DIR/custom-patch.sh"
 
 if ! grep -q "kRussianTrustedRootCaDer" chrome/browser/net/profile_network_context_service.cc; then
-    echo "::error::Корневой сертификат Минцифры не найден в исходнике после custom-patch.sh"
+    echo "::error::Ministry of Digital Development root certificate not found in sources after custom-patch.sh"
     exit 1
 fi
-echo "Проверка: корневой сертификат Минцифры в исходнике присутствует"
+echo "Check: Ministry of Digital Development root certificate is present in sources"
 
 cp "$SCRIPT_DIR/args.gn" out/Default/args.gn
 
 mkdir -p out/tmp out/release
 
-# Если в этой версии Chromium какой-то аргумент переименовали или удалили,
-# gn gen падает с "Assignment had no effect". Убираем такой аргумент и пробуем снова.
+# If some argument was renamed or removed in this Chromium version,
+# gn gen fails with "Assignment had no effect". Remove such an argument and retry.
 gn_gen_retry() {
   local attempt=0
   while :; do
@@ -160,19 +160,19 @@ gn_gen_retry() {
     unknown=$(grep -oE 'You set the variable "[^"]+"' /tmp/gn.err | head -1 | cut -d'"' -f2 || true)
 
     if [ -z "$unknown" ]; then
-      echo "::error::gn gen завершился с ошибкой"
+      echo "::error::gn gen failed"
       cat /tmp/gn.err
       return 1
     fi
 
     attempt=$((attempt + 1))
     if [ "$attempt" -gt 10 ]; then
-      echo "::error::Слишком много неизвестных аргументов gn"
+      echo "::error::Too many unknown gn arguments"
       cat /tmp/gn.err
       return 1
     fi
 
-    echo "::warning::Аргумент '$unknown' не поддерживается этой версией Chromium — удаляю из args.gn"
+    echo "::warning::Argument '$unknown' is not supported by this Chromium version — removing from args.gn"
     sed -i "/^[[:space:]]*${unknown}[[:space:]]*=/d" out/Default/args.gn
   done
 }
@@ -184,16 +184,16 @@ TC_FILE=$(find out/Default -maxdepth 1 -name 'toolchain.ninja' -print -quit)
 
 if [ -n "$TC_FILE" ]; then
     if ! grep -q 'ccache' "$TC_FILE"; then
-        echo "::error::ccache отсутствует в $TC_FILE"
+        echo "::error::ccache is missing from $TC_FILE"
         grep -m3 -E 'command = .*clang' "$TC_FILE" || true
         exit 1
     fi
     grep -m1 -E 'command = .*ccache' "$TC_FILE" | cut -c1-220
 else
-    echo "::warning::toolchain.ninja не найден — проверка ccache пропущена"
+    echo "::warning::toolchain.ninja not found — ccache check skipped"
 fi
 
-# ─── Короткая проверка ccache ──────────────────────────────────────────────
+# ─── Short ccache check ───────────────────────────────────────────────────
 echo "=== ccache SELF-TEST ==="
 
 export CCACHE_LOGFILE=/tmp/ccache-selftest.log
@@ -217,17 +217,17 @@ if timeout 600 ninja -C out/Default obj/base/base/values.o 2>/dev/null; then
         || echo "ccache was not called"
 else
     unset CCACHE_LOGFILE
-    echo "::warning::ccache self-test пропущен: values.o не собрался"
+    echo "::warning::ccache self-test skipped: values.o failed to build"
 fi
 
 echo "=== end SELF-TEST ==="
 
-# ─── Сборка chrome_public_apk ─────────────────────────────────────────────
+# ─── Build chrome_public_apk ──────────────────────────────────────────────
 echo "=== System before compilation ==="
 df -h / | tail -1
 free -g | head -2
 
-# Workflow видит этот маркер и сохраняет ccache даже после timeout.
+# The workflow sees this marker and saves ccache even after timeout.
 touch /tmp/compile_started
 
 echo "=== STAGE: compile start $(date) ==="
@@ -236,11 +236,11 @@ echo "=== STAGE: compile done $(date) ==="
 
 ccache -s
 
-# ─── Подпись реального arm64 APK ──────────────────────────────────────────
+# ─── Sign the actual arm64 APK ────────────────────────────────────────────
 APK_INPUT=$(find out/Default/apks -maxdepth 1 -type f -name 'Chrome*.apk' -print -quit)
 
 if [ -z "$APK_INPUT" ]; then
-    echo "::error::APK не найден в out/Default/apks"
+    echo "::error::APK not found in out/Default/apks"
     find out/Default -type f -name '*.apk' -print || true
     exit 1
 fi
@@ -260,7 +260,7 @@ echo "Output: $SIGNED_APK"
 sign_apk "$UNSIGNED_APK" "$SIGNED_APK"
 
 if [ ! -s "$SIGNED_APK" ]; then
-    echo "::error::Подписанный APK отсутствует или пустой: $SIGNED_APK"
+    echo "::error::Signed APK is missing or empty: $SIGNED_APK"
     ls -lah out/release || true
     exit 1
 fi
