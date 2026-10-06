@@ -1,4 +1,4 @@
-name: CCache Build 2
+name: CCache Build
 
 on:
   push:
@@ -199,7 +199,7 @@ jobs:
 
           # Without -3: replace changes blob hashes in patch headers and git am -3 fails
           # with "sha1 information is lacking or useless".
-          if ! git am --whitespace=nowarn --keep-non-patch "$SCRIPT_DIR"/vanadium/patches/*.patch; then
+          if ! git am --whitespace=nowarn --keep-non-patch ${{ github.workspace }}/vanadium/patches/*.patch; then
             echo "::error::Vanadium patches failed to apply"
             git am --show-current-patch=diff | head -40 || true
             exit 1
