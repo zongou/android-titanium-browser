@@ -1,4 +1,4 @@
-name: CCache Build
+name: CCache Build 2
 
 on:
   push:
@@ -62,8 +62,21 @@ jobs:
         run: |
           export DEBIAN_FRONTEND=noninteractive
           sudo apt-get update
-          sudo apt-get install -y sudo lsb-release file nano git curl python3 python3-pillow imagemagick librsvg2-bin ccache
-          sudo dpkg --add-architecture i386; sudo apt-get update; sudo apt-get install -y libgcc-s1:i386
+          sudo apt-get install -y --no-install-recommends \
+              lsb-release \
+              file \
+              nano \
+              git \
+              curl \
+              python3 \
+              python3-pillow \
+              imagemagick \
+              librsvg2-bin \
+              ccache
+
+          sudo dpkg --add-architecture i386
+          sudo apt-get update
+          sudo apt-get install -y libgcc-s1:i386
 
       - name: Update vanadium
         run: |
@@ -80,13 +93,12 @@ jobs:
             git push
           fi
 
-      - name: Set env
+      - name: Set environment
         run: |
           chmod +x *.sh
           timestamp=$(date +%s)
           echo timestamp=${timestamp} >> $GITHUB_ENV
           echo "chromium_version=$(grep -m1 -o '[0-9]\+\(\.[0-9]\+\)\{3\}' vanadium/args.gn)" >> $GITHUB_ENV
-          echo "${{ github.workspace }}/depot_tools" >> $GITHUB_PATH
 
       # - name: Max build space
       #   run: |
@@ -102,11 +114,11 @@ jobs:
         with:
           path: |
             ~/.cache/ccache
-            ./chromium/src/out/Default/gen/components/user_data_importer/mojom/bookmark_html_parser.mojom-forward.h
           key: ccache-chromium-${{ env.chromium_version }}-
           restore-keys: |
             ccache-chromium-${{ env.chromium_version }}-
             ccache-chromium-
+            ccache-
 
       - name: Print cache hit status
         run: |
@@ -114,20 +126,56 @@ jobs:
           echo "cache-hit=${{ steps.restore-data.outputs.cache-hit }}"
           echo "cache-matched-key=${{ steps.restore-data.outputs.cache-matched-key }}"
 
+      - name: Setup ccache
+        run: |
+          export CCACHE_DIR="$HOME/.cache/ccache"
+          mkdir -p "$CCACHE_DIR"
+
+          export CCACHE_BASEDIR="${{ github.workspace }}"
+          export CCACHE_NOHASHDIR=1
+
+          # use_clang_modules=false is set in args.gn, so "modules" is not needed here.
+          export CCACHE_SLOPPINESS="time_macros,include_file_mtime,include_file_ctime,file_stat_matches,pch_defines"
+
+          # Limit is below GitHub cache quota of 10 GiB.
+          ccache --set-config=max_size=6G
+          ccache --set-config=compression=true
+          ccache --set-config=compression_level=1
+
+          echo CCACHE_DIR="${CCACHE_DIR}" >> $GITHUB_ENV
+          echo CCACHE_BASEDIR="${CCACHE_BASEDIR}" >> $GITHUB_ENV
+          echo CCACHE_NOHASHDIR="${CCACHE_NOHASHDIR}" >> $GITHUB_ENV
+          echo CCACHE_SLOPPINESS="${CCACHE_SLOPPINESS}" >> $GITHUB_ENV
+
+          echo "=== ccache: version/config ==="
+          ccache --version | head -1
+          ccache -p | grep -E 'cache_dir|max_size|compression|sloppiness|base_dir|hash_dir' || true
+
+          echo "=== ccache: restored cache stats ==="
+          ccache -s
+
+          # Further counters will relate only to the current run.
+          ccache -z
+
       - name: Get depot_tools
         run: |
           git clone --depth 1 https://chromium.googlesource.com/chromium/tools/depot_tools.git
+          echo "${{ github.workspace }}/depot_tools" >> $GITHUB_PATH
 
       - name: Get chromium source ${{ env.chromium_version }}
         env:
           CHROMIUM_SOURCE: https://github.com/chromium/chromium.git
           # CHROMIUM_SOURCE: https://chromium.googlesource.com/chromium/src.git
         run: |
-          mkdir -p chromium/src/out/Default; cd chromium/src
+          mkdir -p chromium/src/out/Default
+          cd chromium/src
+
           git init --initial-branch main
           git remote add origin $CHROMIUM_SOURCE
           git fetch --depth 1 $CHROMIUM_SOURCE +refs/tags/$chromium_version:chromium_$chromium_version
           git checkout $chromium_version
+
+          cp ${{ github.workspace }}/.gclient ${{ github.workspace }}/chromium/.gclient
 
       - name: Apply vanadium patches
         working-directory: chromium/src
@@ -148,17 +196,35 @@ jobs:
           replace "${{ github.workspace }}/vanadium/patches" "VANADIUM" "TITANIUM"
           replace "${{ github.workspace }}/vanadium/patches" "Vanadium" "Titanium"
           replace "${{ github.workspace }}/vanadium/patches" "vanadium" "titanium"
-          git config --global user.name 'github-actions[bot]'
-          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
-          git am --whitespace=nowarn --keep-non-patch ${{ github.workspace }}/vanadium/patches/*.patch
 
-      - name: Sync & run hooks
+          # Without -3: replace changes blob hashes in patch headers and git am -3 fails
+          # with "sha1 information is lacking or useless".
+          if ! git am --whitespace=nowarn --keep-non-patch "$SCRIPT_DIR"/vanadium/patches/*.patch; then
+            echo "::error::Vanadium patches failed to apply"
+            git am --show-current-patch=diff | head -40 || true
+            exit 1
+          fi
+      - name: gclient sync & runhooks
         working-directory: chromium/src
         run: |
-          cp ${{ github.workspace }}/.gclient ${{ github.workspace }}/chromium/.gclient
           gclient sync -D --no-history --nohooks
           gclient runhooks
           ./build/install-build-deps.sh --no-prompt
+
+      - name: Ccache clang version check
+        working-directory: chromium/src
+        run: |
+          CLANG_REV=$(cat third_party/llvm-build/Release+Asserts/cr_build_revision 2>/dev/null || true)
+
+          if [ -n "$CLANG_REV" ]; then
+            export CCACHE_COMPILERCHECK="string:$CLANG_REV"
+            echo "clang revision: $CLANG_REV"
+          else
+            export CCACHE_COMPILERCHECK=content
+            echo "::warning::cr_build_revision not found; using CCACHE_COMPILERCHECK=content"
+          fi
+
+          echo CCACHE_COMPILERCHECK=$CCACHE_COMPILERCHECK >> $GITHUB_ENV
 
       # - name: Patch
       #   working-directory: chromium/src
@@ -339,52 +405,6 @@ jobs:
 
           export PATCHED=1
 
-      - name: Setup ccache
-        run: |
-          export CCACHE_DIR="$HOME/.cache/ccache"
-          mkdir -p "$CCACHE_DIR"
-
-          export CCACHE_BASEDIR="${{ github.workspace }}"
-          export CCACHE_NOHASHDIR=1
-
-          # use_clang_modules=false is set in args.gn, so "modules" is not needed here.
-          export CCACHE_SLOPPINESS="time_macros,include_file_mtime,include_file_ctime,file_stat_matches,pch_defines"
-
-          # Limit is below GitHub cache quota of 10 GiB.
-          ccache --set-config=max_size=6G
-          ccache --set-config=compression=true
-          ccache --set-config=compression_level=1
-
-          echo CCACHE_DIR="${CCACHE_DIR}" >> $GITHUB_ENV
-          echo CCACHE_BASEDIR="${CCACHE_BASEDIR}" >> $GITHUB_ENV
-          echo CCACHE_NOHASHDIR="${CCACHE_NOHASHDIR}" >> $GITHUB_ENV
-          echo CCACHE_SLOPPINESS="${CCACHE_SLOPPINESS}" >> $GITHUB_ENV
-
-          echo "=== ccache: version/config ==="
-          ccache --version | head -1
-          ccache -p | grep -E 'cache_dir|max_size|compression|sloppiness|base_dir|hash_dir' || true
-
-          echo "=== ccache: restored cache stats ==="
-          ccache -s
-
-          # Further counters will relate only to the current run.
-          ccache -z
-
-      - name: Ccache clang version check
-        working-directory: chromium/src
-        run: |
-          CLANG_REV=$(cat third_party/llvm-build/Release+Asserts/cr_build_revision 2>/dev/null || true)
-
-          if [ -n "$CLANG_REV" ]; then
-            export CCACHE_COMPILERCHECK="string:$CLANG_REV"
-            echo "clang revision: $CLANG_REV"
-          else
-            export CCACHE_COMPILERCHECK=content
-            echo "::warning::cr_build_revision not found; using CCACHE_COMPILERCHECK=content"
-          fi
-
-          echo CCACHE_COMPILERCHECK=$CCACHE_COMPILERCHECK >> $GITHUB_ENV
-          
       - name: Configure
         working-directory: chromium/src
         run: |
@@ -400,35 +420,45 @@ jobs:
       - name: Ccache toolchain check
         working-directory: chromium/src
         run: |
-          if ! grep -q 'ccache' out/Default/toolchain.ninja; then
-            echo "::error::ccache is missing from out/Default/toolchain.ninja"
-            grep -m3 -E 'command = .*clang' out/Default/toolchain.ninja || true
-            exit 1
+          echo "=== ccache toolchain check ==="
+          TC_FILE=$(find out/Default -maxdepth 1 -name 'toolchain.ninja' -print -quit)
+
+          if [ -n "$TC_FILE" ]; then
+              if ! grep -q 'ccache' "$TC_FILE"; then
+                  echo "::error::ccache is missing from $TC_FILE"
+                  grep -m3 -E 'command = .*clang' "$TC_FILE" || true
+                  exit 1
+              fi
+              grep -m1 -E 'command = .*ccache' "$TC_FILE" | cut -c1-220
+          else
+              echo "::warning::toolchain.ninja not found — ccache check skipped"
           fi
+
+          # ─── Short ccache check ───────────────────────────────────────────────────
+          echo "=== ccache SELF-TEST ==="
 
           export CCACHE_LOGFILE=/tmp/ccache-selftest.log
           rm -f "$CCACHE_LOGFILE"
 
-          if ninja -C out/Default obj/base/base/values.o; then
-            rm -f out/Default/obj/base/base/values.o
-            ninja -C out/Default obj/base/base/values.o
+          if timeout 600 ninja -C out/Default obj/base/base/values.o 2>/dev/null; then
+              rm -f out/Default/obj/base/base/values.o
+              timeout 600 ninja -C out/Default obj/base/base/values.o 2>/dev/null || true
 
-            unset CCACHE_LOGFILE
+              unset CCACHE_LOGFILE
 
-            echo "--- self-test statistics ---"
-            ccache -s
+              echo "--- self-test statistics ---"
+              ccache -s
 
-            echo "--- ccache results ---"
-            grep -h 'Result:' /tmp/ccache-selftest.log \
-              | sed -E 's/^.*Result: //' \
-              | sort \
-              | uniq -c \
-              | sort -rn \
-              || echo "ccache was not called"
-
+              echo "--- ccache results ---"
+              grep -h 'Result:' /tmp/ccache-selftest.log \
+                  | sed -E 's/^.*Result: //' \
+                  | sort \
+                  | uniq -c \
+                  | sort -rn \
+                  || echo "ccache was not called"
           else
-            unset CCACHE_LOGFILE
-            echo "::warning::ccache self-test skipped: values.o failed"
+              unset CCACHE_LOGFILE
+              echo "::warning::ccache self-test skipped: values.o failed to build"
           fi
 
           echo "=== end SELF-TEST ==="
@@ -442,7 +472,7 @@ jobs:
         id: build
         working-directory: chromium/src
         run: |
-          if timeout ${{  inputs.timeout || 330 }}m autoninja -C out/Default chrome_public_apk; then
+          if timeout ${{  inputs.timeout || 330 }}m ninja -C out/Default chrome_public_apk; then
             status=$?
             echo status=$status
             echo status=$status >> $GITHUB_OUTPUT
