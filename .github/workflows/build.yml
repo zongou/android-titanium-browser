@@ -2,14 +2,6 @@ name: Build
 
 on:
   workflow_dispatch:
-    inputs:
-      runner:
-        description: 'Runner'
-        required: true
-        type: string
-        # Explicitly pinned to 24.04: starting 19.10.2026 the ubuntu-latest label
-        # will switch to Ubuntu 26, and changing the environment breaks ccache compatibility.
-        default: 'ubuntu-24.04'
 
   schedule:
     - cron: '0 0 */16 * *'
@@ -27,7 +19,7 @@ concurrency:
 
 jobs:
   build:
-    runs-on: ${{ github.event_name == 'workflow_dispatch' && inputs.runner || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout
