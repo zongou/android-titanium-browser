@@ -17,6 +17,10 @@ on:
         description: Whether to run vscode server
         type: boolean
         default: true
+      keep-alive:
+        description: Whether to keep alive
+        type: boolean
+        default: true
 
 permissions:
   contents: write
