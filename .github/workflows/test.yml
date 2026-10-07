@@ -60,6 +60,7 @@ jobs:
 
       - name: Restore data
         id: restore-data
+        if: inputs.restore-cache
         uses: actions/cache/restore@v6
         with:
           path: |
