@@ -34,7 +34,7 @@ concurrency:
 
 jobs:
   build:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     outputs:
       status: ${{ steps.build.outputs.status }}
       cacheKey: ${{ steps.generate-cacheKey.outputs.cacheKey }}
