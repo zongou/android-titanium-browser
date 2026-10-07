@@ -1,6 +1,6 @@
 # Tools
 
-### setup_vscode
+## setup_vscode
 
 ```sh
 cd /tmp
@@ -12,7 +12,7 @@ code --install-extension esbenp.prettier-vscode
 code --install-extension zongou.simple-runner
 ```
 
-### get:cr
+## get:cr
 
 ```sh
 cd /tmp
@@ -24,7 +24,7 @@ cargo run build:release
 cargo run install
 ```
 
-### get:upmd
+## get:upmd
 
 ```sh
 VERSION=$(curl -s -S "https://api.github.com/repos/rezigned/upmd/releases" | jq -r .[0].tag_name)
@@ -36,7 +36,7 @@ curl -L ${URL} | xz -d | tar -C /usr/local/bin --strip-components=1 -x --wildcar
 upmd --version
 ```
 
-### get:msedit
+## get:msedit
 
 ```sh
 # https://github.com/microsoft/edit/releases/download/v2.0.0/edit-2.0.0-x86_64-linux-gnu.tar.gz
@@ -49,7 +49,7 @@ curl -L ${URL} | gzip -d | tar -C /usr/local/bin -x --wildcards "edit"
 edit --version
 ```
 
-### get:fresh
+## get:fresh
 
 ```sh
 VERSION=$(curl -s -S "https://api.github.com/repos/sinelaw/fresh/releases" | jq -r .[0].tag_name)
@@ -60,7 +60,7 @@ curl -L ${URL} | gzip -d | tar -C /usr/local/bin --strip-components=1 -x --wildc
 fresh --version
 ```
 
-### get:helix
+## get:helix
 
 ```sh
 VERSION=$(curl -s -S https://api.github.com/repos/helix-editor/helix/releases | jq -r .[0].tag_name)
@@ -72,7 +72,7 @@ ln -snf /opt/helix-${VERSION}-${ARCH}-linux/hx /usr/local/bin/hx
 hx --version
 ```
 
-### get:dufs
+## get:dufs
 
 ```sh
 VERSION=$(curl -s -S https://api.github.com/repos/sigoden/dufs/releases | jq -r .[0].tag_name)
@@ -83,7 +83,7 @@ curl -L ${URL} | gzip -d | tar -C /usr/local/bin -x
 dufs --version
 ```
 
-### get:trzsz
+## get:trzsz
 
 ```sh
 VERSION=$(curl -s -S https://api.github.com/repos/ruanimal/trzsz-rs/releases | jq -r .[0].tag_name)
@@ -94,7 +94,7 @@ curl -LkSs "${URL}" | gzip -d | tar -C /usr/local/bin -x
 trzsz --version
 ```
 
-### get:ttyd
+## get:ttyd
 
 ```sh
 VERSION=$(curl -s -S https://api.github.com/repos/zongou/ttyd/releases | jq -r .[0].tag_name)
@@ -107,7 +107,7 @@ sudo mv ttyd /usr/local/bin
 ttyd --version
 ```
 
-### get:cloudflared
+## get:cloudflared
 
 ```sh
 VERSION=$(curl -s -S https://api.github.com/repos/cloudflare/cloudflared/releases | jq -r .[0].tag_name)
@@ -119,7 +119,7 @@ sudo mv cloudflared /usr/local/bin
 cloudflared --version
 ```
 
-### serve
+## serve
 
 ```sh
 CLOUDFLARED_LOG=/tmp/cloudflared.log
@@ -142,16 +142,16 @@ fi
 nohup dufs --allow-all >/tmp/dufs.log 2>&1 &
 ```
 
-### convert_patch
+## convert_patch
 
 ````sh
-echo '#### patch:default'
+echo '### patch:default'
 echo '```sh'
-cat patch.sh | sed -E 's/^#\!\/bin\/bash//' | sed -E '/^#[[:space:]]*sed/!s/^# (.*)/\n```\n#### patch:\1\n```sh/' | sed ':a;N;$!ba;s/\n\n```/```/g' |sed -E 's/(patch:\w+:) /\1/g'
+cat patch.sh | sed -E 's/^#\!\/bin\/bash//' | sed -E '/^#[[:space:]]*sed/!s/^# (.*)/\n```\n### patch:\1\n```sh/' | sed ':a;N;$!ba;s/\n\n```/```/g' |sed -E 's/(patch:\w+:) /\1/g'
 echo '```'
 ````
 
-### update_task
+## update_task
 
 ```sh
 git add taskfile.md tools.md
@@ -159,11 +159,22 @@ git commit -m "update taskfile.md"
 git push
 ```
 
-### patch_vscode
+## patch_vscode
 
 ```sh
 cd /tmp
 git clone https://github.com/zongou/vscli
 cd vscli
 ./vscli patch
+```
+
+## test
+
+```sh
+count=0
+while test $count -le 100; do
+  printf "${count}\n"
+  sleep 1
+  count=$((count + 1))
+done
 ```
