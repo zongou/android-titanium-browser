@@ -9,6 +9,14 @@ on:
         description: Whether to restore cache
         type: boolean
         default: false
+      run-ttyd:
+        description: Whether to run ttyd server
+        type: boolean
+        default: true
+      run-vscode:
+        description: Whether to run vscode server
+        type: boolean
+        default: true
 
 permissions:
   contents: write
@@ -32,6 +40,7 @@ jobs:
 
       - uses: zongou/run-ttyd-server@main
         name: Run ttyd server
+        if: inputs.run-ttyd
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
@@ -40,23 +49,20 @@ jobs:
           credential: ${{ secrets.TTYD_CREDENTIAL }}
           command: fresh
 
-      # - uses: zongou/run-vscode-server@main
-      #   name: Run vscode server
-      #   env:
-      #     GH_TOKEN: ${{ github.token }}
-      #     GH_REPO: ${{ github.repository }}
-      #     BRANCH: ${{ github.ref }}
-      #   with:
-      #     token: ${{ secrets.VSCODE_SERVER_TOKEN }}
+      - uses: zongou/run-vscode-server@main
+        name: Run vscode server
+        if: inputs.run-vscode
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          BRANCH: ${{ github.ref }}
+        with:
+          token: ${{ secrets.VSCODE_SERVER_TOKEN }}
 
-      # - name: Print envs
-      #   run: |
-      #     echo "inputs: ${{ toJson(inputs) }}"
-      #     echo "github: ${{ toJson(github) }}"
-
-      - name: Print workspace
+      - name: Print envs
         run: |
-          echo "workspace: ${{ github.workspace }}"
+          echo "inputs: ${{ toJson(inputs) }}"
+          echo "github: ${{ toJson(github) }}"
 
       - name: Restore data
         id: restore-data
