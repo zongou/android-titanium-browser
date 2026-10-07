@@ -4,6 +4,11 @@ on:
   # push:
   #   paths: .github/workflows/test.yml
   workflow_dispatch:
+    inputs:
+      restore-cache:
+        description: Whether to restore cache
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -57,7 +62,6 @@ jobs:
         id: restore-data
         uses: actions/cache/restore@v6
         with:
-          fail-on-cache-miss: true
           path: |
             ~/.cache/ccache
           key: ccache-chromium-
