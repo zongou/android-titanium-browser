@@ -6,19 +6,19 @@ on:
   workflow_dispatch:
     inputs:
       restore-cache:
-        description: Whether to restore cache
+        description: restore cache
         type: boolean
         default: false
       run-ttyd:
-        description: Whether to run ttyd server
+        description: run ttyd server
         type: boolean
         default: true
       run-vscode:
-        description: Whether to run vscode server
+        description: runvscode server
         type: boolean
         default: true
       keep-alive:
-        description: Whether to keep alive
+        description: keep alive
         type: boolean
         default: true
 
