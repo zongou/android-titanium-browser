@@ -88,5 +88,6 @@ jobs:
           echo "cache-hit=${{ steps.restore-data.outputs.cache-hit }}"
           echo "cache-matched-key=${{ steps.restore-data.outputs.cache-matched-key }}"
 
-      # - name: Keep alive
-      #   run: sleep 6h
+      - name: Keep alive
+        if: inputs.keep-alive
+        run: sleep 6h
