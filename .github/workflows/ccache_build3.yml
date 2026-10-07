@@ -491,20 +491,31 @@ jobs:
           echo build complete
           cp $(find out/Default/apks -name 'Chrome*.apk') out/tmp/$chromium_version-arm64-v8a.apk
 
-      - name: After compilation
-        working-directory: chromium/src
+      - name: ccache stats
+        if: always()
         run: |
+          export CCACHE_DIR="$HOME/.cache/ccache"
           echo "=== ccache stats (current run) ==="
           ccache --version | head -1
           ccache --show-stats -v || ccache --show-stats
-
           echo "=== cache size ==="
           du -sh "$CCACHE_DIR" || true
 
-      - name: generate cache key
-        id: generate-cacheKey
-        run: |
-          echo cacheKey=ccache-chromium-${{ env.chromium_version }}-${{ env.timestamp }} >> $GITHUB_OUTPUT
+          # Job Summary: immediately shows whether cache was reused.
+          STATS=$(ccache --print-stats 2>/dev/null || true)
+          HITS=$(echo "$STATS" | awk -F'\t' '/^(direct_cache_hit|preprocessed_cache_hit|remote_storage_hit)/{h+=$2} END{print h+0}')
+          MISS=$(echo "$STATS" | awk -F'\t' '/^cache_miss/{print $2+0}')
+          {
+            echo ""
+            echo "### ccache in this run"
+            echo ""
+            echo "| metric | value |"
+            echo "|---|---|"
+            echo "| hits | ${HITS:-0} |"
+            echo "| misses | ${MISS:-0} |"
+            echo ""
+            echo "Cold run ≈ 0 hits. From the second run there should be many hits."
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Store ccache cache
         if: always()
@@ -512,8 +523,7 @@ jobs:
         with:
           path: |
             ~/.cache/ccache
-            ./chromium/src/out/Default/gen/components/user_data_importer/mojom/bookmark_html_parser.mojom-forward.h
-          key: ${{ steps.generate-cacheKey.outputs.cacheKey }}
+          key: ccache-chromium-${{ env.chromium_version }}-${{ env.timestamp }}
 
       - name: Continue build action
         if: steps.build.outputs.status == 124
