@@ -4,18 +4,6 @@ on:
   # push:
   #   paths: .github/workflows/test.yml
   workflow_dispatch:
-    inputs:
-      vscode-server-token:
-        description: "vscode server token"
-        required: false
-      ttyd-credential:
-        description: "ttyd user:pass"
-        required: false
-      cache-key:
-        description: "cache key"
-        required: false
-        default: ccache-chromium-
-        type: string
 
 permissions:
   contents: write
@@ -34,15 +22,18 @@ jobs:
       # - name: Install herdr
       #   run: curl -fsSL https://herdr.dev/install.sh | sh
 
-      # - uses: zongou/run-ttyd-server@main
-      #   name: Run ttyd server
-      #   env:
-      #     GH_TOKEN: ${{ github.token }}
-      #     GH_REPO: ${{ github.repository }}
-      #     BRANCH: ${{ github.ref }}
-      #   with:
-      #     credential: ${{ inputs.ttyd-credential || secrets.TTYD_CREDENTIAL }}
-      #     command: herdr
+      - name: Install fresh
+        run: curl -fsSL https://raw.githubusercontent.com/sinelaw/fresh/refs/heads/master/scripts/install.sh | sh
+
+      - uses: zongou/run-ttyd-server@main
+        name: Run ttyd server
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          BRANCH: ${{ github.ref }}
+        with:
+          credential: ${{ secrets.TTYD_CREDENTIAL }}
+          command: fresh
 
       # - uses: zongou/run-vscode-server@main
       #   name: Run vscode server
@@ -51,7 +42,7 @@ jobs:
       #     GH_REPO: ${{ github.repository }}
       #     BRANCH: ${{ github.ref }}
       #   with:
-      #     token: ${{ inputs.vscode-server-token || secrets.VSCODE_SERVER_TOKEN }}
+      #     token: ${{ secrets.VSCODE_SERVER_TOKEN }}
 
       # - name: Print envs
       #   run: |
@@ -69,7 +60,7 @@ jobs:
           fail-on-cache-miss: true
           path: |
             ~/.cache/ccache
-          key: ${{ inputs.cache-key || 'ccache-chromium-' }}
+          key: ccache-chromium-
           restore-keys: |
             cccache-chromium-
             ccache-
