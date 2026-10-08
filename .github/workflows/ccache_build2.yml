@@ -116,6 +116,11 @@ jobs:
           echo CCACHE_NOHASHDIR="$CCACHE_NOHASHDIR" >> "$GITHUB_ENV"
           echo CCACHE_SLOPPINESS="$CCACHE_SLOPPINESS" >> "$GITHUB_ENV"
 
+      - name: Setup depot_tools
+        run: |
+          git clone --depth 1 https://chromium.googlesource.com/chromium/tools/depot_tools.git
+          echo "${{ github.workspace }}/depot_tools" >> "$GITHUB_ENV"
+
       - name: Build
         id: build
         env:
@@ -147,8 +152,6 @@ jobs:
           
 
           # ─── depot_tools ───────────────────────────────────────────────────────────
-          git clone --depth 1 https://chromium.googlesource.com/chromium/tools/depot_tools.git
-          export PATH="$PWD/depot_tools:$PATH"
 
           # ─── Chromium source ───────────────────────────────────────────────────────
           mkdir -p chromium/src/out/Default
