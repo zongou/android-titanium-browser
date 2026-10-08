@@ -136,6 +136,34 @@ jobs:
 
           cp ${{ github.workspace }}/.gclient ${{ github.workspace }}/chromium/.gclient
 
+      - name: Apply vanadium patches
+        working-directory: chromium/src
+        run: |
+          replace() {
+            export org=$2 new=$3
+            find $1 -type f -exec sed -i 's@'$org'@'$new'@g' {} \;
+          }
+
+          # https://grapheneos.org/build#browser-and-webview
+          rm -rf "${{ github.workspace }}"/vanadium/patches/*trichrome-{apk-build-targets,browser-apk-targets}.patch
+          rm -rf "${{ github.workspace }}"/vanadium/patches/*{detailed,supported}-language*.patch
+          rm -rf "${{ github.workspace }}"/vanadium/patches/*javascript-optimizer-{site-setting,settings-UI}.patch
+          rm -rf "${{ github.workspace }}"/vanadium/patches/*component-updates.patch
+          rm -rf "${{ github.workspace }}"/vanadium/patches/*{pdf,PDF,for-content-public,toolbar-button,configs-from-config-app,new-tab-card,predictive-back*}*.patch
+          # rm -rf "${{ github.workspace }}"/vanadium/patches/*crashpad*.patch
+
+          replace "${{ github.workspace }}/vanadium/patches" "VANADIUM" "TITANIUM"
+          replace "${{ github.workspace }}/vanadium/patches" "Vanadium" "Titanium"
+          replace "${{ github.workspace }}/vanadium/patches" "vanadium" "titanium"
+
+          # Without -3: replace changes blob hashes in patch headers and git am -3 fails
+          # with "sha1 information is lacking or useless".
+          if ! git am --whitespace=nowarn --keep-non-patch "${{ github.workspace }}"/vanadium/patches/*.patch; then
+              echo "::error::Vanadium patches failed to apply"
+              git am --show-current-patch=diff | head -40 || true
+              exit 1
+          fi
+
       - name: Build
         working-directory: chromium/src
         id: build
@@ -173,25 +201,7 @@ jobs:
 
 
           # ─── Vanadium -> Titanium patches ──────────────────────────────────────────
-          # https://grapheneos.org/build#browser-and-webview
-          rm -rf "${{ github.workspace }}"/vanadium/patches/*trichrome-{apk-build-targets,browser-apk-targets}.patch
-          rm -rf "${{ github.workspace }}"/vanadium/patches/*{detailed,supported}-language*.patch
-          rm -rf "${{ github.workspace }}"/vanadium/patches/*javascript-optimizer-{site-setting,settings-UI}.patch
-          rm -rf "${{ github.workspace }}"/vanadium/patches/*component-updates.patch
-          rm -rf "${{ github.workspace }}"/vanadium/patches/*{pdf,PDF,for-content-public,toolbar-button,configs-from-config-app,new-tab-card,predictive-back*}*.patch
-          # rm -rf "${{ github.workspace }}"/vanadium/patches/*crashpad*.patch
 
-          replace "${{ github.workspace }}/vanadium/patches" "VANADIUM" "TITANIUM"
-          replace "${{ github.workspace }}/vanadium/patches" "Vanadium" "Titanium"
-          replace "${{ github.workspace }}/vanadium/patches" "vanadium" "titanium"
-
-          # Without -3: replace changes blob hashes in patch headers and git am -3 fails
-          # with "sha1 information is lacking or useless".
-          if ! git am --whitespace=nowarn --keep-non-patch "${{ github.workspace }}"/vanadium/patches/*.patch; then
-              echo "::error::Vanadium patches failed to apply"
-              git am --show-current-patch=diff | head -40 || true
-              exit 1
-          fi
 
           # ─── gclient sync ─────────────────────────────────────────────────────────
           echo "=== STAGE: gclient sync $(date) ==="
