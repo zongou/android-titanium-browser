@@ -134,7 +134,7 @@ jobs:
           git fetch --depth 1 "$CHROMIUM_SOURCE" "+refs/tags/$VERSION:chromium_$VERSION"
           git checkout "$VERSION"
 
-          cp "$SCRIPT_DIR/.gclient" ../.gclient
+           cp ${{ github.workspace }}/.gclient ${{ github.workspace }}/chromium/.gclient
 
       - name: Build
         working-directory: chromium/src
