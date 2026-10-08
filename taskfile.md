@@ -44,16 +44,17 @@ export CCACHE_NOHASHDIR=1
 # use_clang_modules=false is set in args.gn, so "modules" is not needed here.
 export CCACHE_SLOPPINESS="time_macros,include_file_mtime,include_file_ctime,file_stat_matches,pch_defines"
 
-if test -c $chromium_srcdir/third_party/llvm-build/Release+Asserts/cr_build_revision; then
-  CLANG_REV=$(cat $chromium_srcdir/third_party/llvm-build/Release+Asserts/cr_build_revision)
+version_file="${chromium_srcdir}/third_party/llvm-build/Release+Asserts/cr_build_revision"
+if test -e $version_file; then
+  CLANG_REV=$(cat $version_file)
 
   if [ -n "$CLANG_REV" ]; then
     export CCACHE_COMPILERCHECK="string:$CLANG_REV"
     echo "clang revision: $CLANG_REV"
-  else
-    export CCACHE_COMPILERCHECK=content
-    echo "::warning::cr_build_revision not found; using CCACHE_COMPILERCHECK=content"
   fi
+else
+  export CCACHE_COMPILERCHECK=content
+  echo "::warning::cr_build_revision not found; using CCACHE_COMPILERCHECK=content"
 fi
 ```
 
