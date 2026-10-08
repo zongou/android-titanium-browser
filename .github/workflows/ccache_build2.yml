@@ -119,7 +119,7 @@ jobs:
       - name: Setup depot_tools
         run: |
           git clone --depth 1 https://chromium.googlesource.com/chromium/tools/depot_tools.git
-          echo "${{ github.workspace }}/depot_tools" >> "$GITHUB_ENV"
+          echo "${{ github.workspace }}/depot_tools" >> "$GITHUB_PATH"
 
       - name: Build
         id: build
