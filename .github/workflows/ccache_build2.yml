@@ -122,6 +122,9 @@ jobs:
           echo "${{ github.workspace }}/depot_tools" >> "$GITHUB_PATH"
 
       - name: Get Chromium source ${{ env.VERSION }}
+        env:
+          CHROMIUM_SOURCE: https://github.com/chromium/chromium.git
+          # CHROMIUM_SOURCE: https://chromium.googlesource.com/chromium/src.git
         run: |
           mkdir -p chromium/src/out/Default
           cd chromium/src
