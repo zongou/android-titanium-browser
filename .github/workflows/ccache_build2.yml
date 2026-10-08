@@ -172,6 +172,23 @@ jobs:
 
           ./build/install-build-deps.sh --no-prompt
 
+      - name: CCache clang version check
+        run: |
+          version_file="${{ github.workspace }}/chromium/src/third_party/llvm-build/Release+Asserts/cr_build_revision"
+          if test -e $version_file; then
+            CLANG_REV=$(cat $version_file)
+
+            if [ -n "$CLANG_REV" ]; then
+              export CCACHE_COMPILERCHECK="string:$CLANG_REV"
+              echo "clang revision: $CLANG_REV"
+            fi
+          else
+            export CCACHE_COMPILERCHECK=content
+            echo "::warning::cr_build_revision not found; using CCACHE_COMPILERCHECK=content"
+          fi
+
+          echo CCACHE_COMPILERCHECK="$CCACHE_COMPILERCHECK" >> "$GITHUB_ENV"
+
       - name: Build
         working-directory: chromium/src
         id: build
@@ -215,15 +232,7 @@ jobs:
 
 
           # ─── Clang version check for ccache ────────────────────────────────────────
-          CLANG_REV=$(cat third_party/llvm-build/Release+Asserts/cr_build_revision 2>/dev/null || true)
 
-          if [ -n "$CLANG_REV" ]; then
-              export CCACHE_COMPILERCHECK="string:$CLANG_REV"
-              echo "clang revision: $CLANG_REV"
-          else
-              export CCACHE_COMPILERCHECK=content
-              echo "::warning::cr_build_revision not found; using CCACHE_COMPILERCHECK=content"
-          fi
 
           # ─── GN ───────────────────────────────────────────────────────────────────
           echo "=== STAGE: gn gen $(date) ==="
