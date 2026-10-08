@@ -2,7 +2,7 @@ name: Ccache Build 2
 
 on:
   push:
-    paths: .github/workflows/cached_build2.yml
+    paths: .github/workflows/ccache_build2.yml
   workflow_dispatch:
   # schedule:
   #   - cron: '0 0 */16 * *'
