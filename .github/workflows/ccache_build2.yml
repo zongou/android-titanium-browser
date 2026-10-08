@@ -121,7 +121,20 @@ jobs:
           git clone --depth 1 https://chromium.googlesource.com/chromium/tools/depot_tools.git
           echo "${{ github.workspace }}/depot_tools" >> "$GITHUB_PATH"
 
+      - name: Get Chromium source ${{ env.VERSION }}
+        run: |
+          mkdir -p chromium/src/out/Default
+          cd chromium/src
+
+          git init -q
+          git remote add origin "$CHROMIUM_SOURCE"
+          git fetch --depth 1 "$CHROMIUM_SOURCE" "+refs/tags/$VERSION:chromium_$VERSION"
+          git checkout "$VERSION"
+
+          cp "$SCRIPT_DIR/.gclient" ../.gclient
+
       - name: Build
+        working-directory: chromium/src
         id: build
         env:
           DEBIAN_FRONTEND: noninteractive
@@ -154,15 +167,7 @@ jobs:
           # ─── depot_tools ───────────────────────────────────────────────────────────
 
           # ─── Chromium source ───────────────────────────────────────────────────────
-          mkdir -p chromium/src/out/Default
-          cd chromium/src
 
-          git init -q
-          git remote add origin "$CHROMIUM_SOURCE"
-          git fetch --depth 1 "$CHROMIUM_SOURCE" "+refs/tags/$VERSION:chromium_$VERSION"
-          git checkout "$VERSION"
-
-          cp "$SCRIPT_DIR/.gclient" ../.gclient
 
           # ─── Vanadium -> Titanium patches ──────────────────────────────────────────
           # https://grapheneos.org/build#browser-and-webview
