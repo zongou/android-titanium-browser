@@ -164,6 +164,14 @@ jobs:
               exit 1
           fi
 
+      - name: Gclient sync & runhooks
+        working-directory: chromium/src
+        run: |
+          gclient sync -D --no-history --nohooks
+          gclient runhooks
+
+          ./build/install-build-deps.sh --no-prompt
+
       - name: Build
         working-directory: chromium/src
         id: build
@@ -204,11 +212,7 @@ jobs:
 
 
           # ─── gclient sync ─────────────────────────────────────────────────────────
-          echo "=== STAGE: gclient sync $(date) ==="
-          gclient sync -D --no-history --nohooks
-          gclient runhooks
 
-          ./build/install-build-deps.sh --no-prompt
 
           # ─── Clang version check for ccache ────────────────────────────────────────
           CLANG_REV=$(cat third_party/llvm-build/Release+Asserts/cr_build_revision 2>/dev/null || true)
