@@ -46,21 +46,21 @@ jobs:
 
       - name: Get Chromium version
         run: |
-          VERSION=$(grep -m1 -oE '[0-9]+(\.[0-9]+){3}' vanadium/args.gn)
-          if [ -z "$VERSION" ]; then
-            echo "::error::Failed to determine Chromium VERSION"
+          chromium_version=$(grep -m1 -oE '[0-9]+(\.[0-9]+){3}' vanadium/args.gn)
+          if [ -z "$chromium_version" ]; then
+            echo "::error::Failed to determine Chromium chromium_version"
             exit 1
           fi
-          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
-          echo "Building Chromium $VERSION"
+          echo "chromium_version=$chromium_version" >> "$GITHUB_ENV"
+          echo "Building Chromium $chromium_version"
 
       - name: Restore ccache
         uses: actions/cache/restore@v4
         with:
           path: ~/.cache/ccache
-          key: ccache-${{ env.VERSION }}-${{ github.run_id }}
+          key: ccache-${{ env.chromium_version }}-${{ github.run_id }}
           restore-keys: |
-            ccache-${{ env.VERSION }}-
+            ccache-${{ env.chromium_version }}-
             ccache-
 
       - name: Set environment
@@ -92,7 +92,7 @@ jobs:
           export CCACHE_DIR="$HOME/.cache/ccache"
           mkdir -p "$CCACHE_DIR"
 
-          export CCACHE_BASEDIR="$SCRIPT_DIR"
+          export CCACHE_BASEDIR="${{ github.workspace }}"
           export CCACHE_NOHASHDIR=1
           export CCACHE_SLOPPINESS="time_macros,include_file_mtime,include_file_ctime,file_stat_matches,pch_defines"
 
@@ -121,7 +121,7 @@ jobs:
           git clone --depth 1 https://chromium.googlesource.com/chromium/tools/depot_tools.git
           echo "${{ github.workspace }}/depot_tools" >> "$GITHUB_PATH"
 
-      - name: Get Chromium source ${{ env.VERSION }}
+      - name: Get Chromium source ${{ env.chromium_version }}
         env:
           CHROMIUM_SOURCE: https://github.com/chromium/chromium.git
           # CHROMIUM_SOURCE: https://chromium.googlesource.com/chromium/src.git
@@ -131,10 +131,10 @@ jobs:
 
           git init -q
           git remote add origin "$CHROMIUM_SOURCE"
-          git fetch --depth 1 "$CHROMIUM_SOURCE" "+refs/tags/$VERSION:chromium_$VERSION"
-          git checkout "$VERSION"
+          git fetch --depth 1 "$CHROMIUM_SOURCE" "+refs/tags/$chromium_version:chromium_$chromium_version"
+          git checkout "$chromium_version"
 
-           cp ${{ github.workspace }}/.gclient ${{ github.workspace }}/chromium/.gclient
+          cp ${{ github.workspace }}/.gclient ${{ github.workspace }}/chromium/.gclient
 
       - name: Build
         working-directory: chromium/src
@@ -152,14 +152,14 @@ jobs:
           set -eo pipefail
 
           export SCRIPT_DIR=${{ github.workspace }}
-          source "$SCRIPT_DIR/common.sh"
+          source "${{ github.workspace }}/common.sh"
           set_keys
 
-          export VERSION=$(grep -m1 -oE '[0-9]+(\.[0-9]+){3}' "$SCRIPT_DIR/vanadium/args.gn")
+          export chromium_version=$(grep -m1 -oE '[0-9]+(\.[0-9]+){3}' "${{ github.workspace }}/vanadium/args.gn")
           export CHROMIUM_SOURCE="https://chromium.googlesource.com/chromium/src.git"
           export DEBIAN_FRONTEND=noninteractive
 
-          echo "=== Target Chromium Version: $VERSION | CPUs: $(nproc) | $(date) ==="
+          echo "=== Target Chromium Version: $chromium_version | CPUs: $(nproc) | $(date) ==="
 
           # ─── APT dependencies ──────────────────────────────────────────────────────
 
@@ -174,20 +174,20 @@ jobs:
 
           # ─── Vanadium -> Titanium patches ──────────────────────────────────────────
           # https://grapheneos.org/build#browser-and-webview
-          rm -rf "$SCRIPT_DIR"/vanadium/patches/*trichrome-{apk-build-targets,browser-apk-targets}.patch
-          rm -rf "$SCRIPT_DIR"/vanadium/patches/*{detailed,supported}-language*.patch
-          rm -rf "$SCRIPT_DIR"/vanadium/patches/*javascript-optimizer-{site-setting,settings-UI}.patch
-          rm -rf "$SCRIPT_DIR"/vanadium/patches/*component-updates.patch
-          rm -rf "$SCRIPT_DIR"/vanadium/patches/*{pdf,PDF,for-content-public,toolbar-button,configs-from-config-app,new-tab-card,predictive-back*}*.patch
-          # rm -rf "$SCRIPT_DIR"/vanadium/patches/*crashpad*.patch
+          rm -rf "${{ github.workspace }}"/vanadium/patches/*trichrome-{apk-build-targets,browser-apk-targets}.patch
+          rm -rf "${{ github.workspace }}"/vanadium/patches/*{detailed,supported}-language*.patch
+          rm -rf "${{ github.workspace }}"/vanadium/patches/*javascript-optimizer-{site-setting,settings-UI}.patch
+          rm -rf "${{ github.workspace }}"/vanadium/patches/*component-updates.patch
+          rm -rf "${{ github.workspace }}"/vanadium/patches/*{pdf,PDF,for-content-public,toolbar-button,configs-from-config-app,new-tab-card,predictive-back*}*.patch
+          # rm -rf "${{ github.workspace }}"/vanadium/patches/*crashpad*.patch
 
-          replace "$SCRIPT_DIR/vanadium/patches" "VANADIUM" "TITANIUM"
-          replace "$SCRIPT_DIR/vanadium/patches" "Vanadium" "Titanium"
-          replace "$SCRIPT_DIR/vanadium/patches" "vanadium" "titanium"
+          replace "${{ github.workspace }}/vanadium/patches" "VANADIUM" "TITANIUM"
+          replace "${{ github.workspace }}/vanadium/patches" "Vanadium" "Titanium"
+          replace "${{ github.workspace }}/vanadium/patches" "vanadium" "titanium"
 
           # Without -3: replace changes blob hashes in patch headers and git am -3 fails
           # with "sha1 information is lacking or useless".
-          if ! git am --whitespace=nowarn --keep-non-patch "$SCRIPT_DIR"/vanadium/patches/*.patch; then
+          if ! git am --whitespace=nowarn --keep-non-patch "${{ github.workspace }}"/vanadium/patches/*.patch; then
               echo "::error::Vanadium patches failed to apply"
               git am --show-current-patch=diff | head -40 || true
               exit 1
@@ -219,7 +219,7 @@ jobs:
           # issue after 10 minutes. Therefore: catch errors as warnings, but require the
           # script to reach the end (upstream sets PATCHED=1 at the end).
           set +e
-          source "$SCRIPT_DIR/patch.sh" > /tmp/patch.log 2>&1
+          source "${{ github.workspace }}/patch.sh" > /tmp/patch.log 2>&1
           patch_rc=$?
           set -e
           tail -40 /tmp/patch.log
@@ -239,7 +239,7 @@ jobs:
           fi
 
           # Our Ministry of Digital Development patch: here the error must be fatal.
-          source "$SCRIPT_DIR/custom-patch.sh"
+          source "${{ github.workspace }}/custom-patch.sh"
 
           if ! grep -q "kRussianTrustedRootCaDer" chrome/browser/net/profile_network_context_service.cc; then
               echo "::error::Ministry of Digital Development root certificate not found in sources after custom-patch.sh"
@@ -247,7 +247,7 @@ jobs:
           fi
           echo "Check: Ministry of Digital Development root certificate is present in sources"
 
-          cp "$SCRIPT_DIR/args.gn" out/Default/args.gn
+          cp "${{ github.workspace }}/args.gn" out/Default/args.gn
 
           mkdir -p out/tmp out/release
 
@@ -353,8 +353,8 @@ jobs:
               exit 1
           fi
 
-          UNSIGNED_APK="out/tmp/${VERSION}-arm64-v8a-unsigned.apk"
-          SIGNED_APK="out/release/${VERSION}-arm64-v8a.apk"
+          UNSIGNED_APK="out/tmp/${chromium_version}-arm64-v8a-unsigned.apk"
+          SIGNED_APK="out/release/${chromium_version}-arm64-v8a.apk"
 
           cp "$APK_INPUT" "$UNSIGNED_APK"
 
@@ -380,7 +380,7 @@ jobs:
           echo "=== Build finished successfully! $(date) ==="
           ccache -s
 
-          rm -rf "$SCRIPT_DIR/keys"
+          rm -rf "${{ github.workspace }}/keys"
 
 
 
@@ -442,7 +442,7 @@ jobs:
         uses: actions/cache/save@v4
         with:
           path: ~/.cache/ccache
-          key: ccache-${{ env.VERSION }}-${{ github.run_id }}
+          key: ccache-${{ env.chromium_version }}-${{ github.run_id }}
 
       # Keep a single up-to-date cache in the repository: it is a superset of previous ones.
       # Without this, 3–4 runs will hit the GitHub 10 GiB limit and evict the cache.
@@ -452,7 +452,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          KEEP="ccache-${{ env.VERSION }}-${{ github.run_id }}"
+          KEEP="ccache-${{ env.chromium_version }}-${{ github.run_id }}"
           echo "Keeping: $KEEP"
           gh cache list -R "${{ github.repository }}" --limit 100 --json id,key \
             --jq ".[] | select(.key | startswith(\"ccache-\")) | select(.key != \"$KEEP\") | .id" \
@@ -481,18 +481,18 @@ jobs:
             find chromium/src/out/release -maxdepth 1 -type f -ls 2>/dev/null || true
             exit 1
           fi
-          VERSION_FROM_FILE=$(basename "$APK" | sed 's/-arm64-v8a\.apk$//')
-          if [ -z "$VERSION_FROM_FILE" ]; then
+          chromium_version_FROM_FILE=$(basename "$APK" | sed 's/-arm64-v8a\.apk$//')
+          if [ -z "$chromium_version_FROM_FILE" ]; then
             echo "::error::Failed to get version from $APK"
             exit 1
           fi
-          RELEASE_APK="${VERSION_FROM_FILE}-${{ env.unix_time }}-arm64-v8a.apk"
+          RELEASE_APK="${chromium_version_FROM_FILE}-${{ env.unix_time }}-arm64-v8a.apk"
           cp "$APK" "$RELEASE_APK"
           if [ ! -s "$RELEASE_APK" ]; then
             echo "::error::APK prepared for release is empty"
             exit 1
           fi
-          echo "VERSION=$VERSION_FROM_FILE" >> "$GITHUB_ENV"
+          echo "chromium_version=$chromium_version_FROM_FILE" >> "$GITHUB_ENV"
           echo "RELEASE_APK=$RELEASE_APK" >> "$GITHUB_ENV"
           echo "apk_found=true" >> "$GITHUB_OUTPUT"
           echo "=== Ready for GitHub Release ==="
@@ -504,8 +504,8 @@ jobs:
         if: steps.release.outputs.apk_found == 'true'
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          name: v${{ env.VERSION }}
-          tag_name: v${{ env.VERSION }}
+          name: v${{ env.chromium_version }}
+          tag_name: v${{ env.chromium_version }}
           files: ${{ env.RELEASE_APK }}
 
       - name: Attest APK provenance
