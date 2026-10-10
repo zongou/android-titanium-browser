@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       update_vanadium:
-        description: 'Update vanadium'
+        description: "Update vanadium"
         required: false
         type: boolean
         default: false
@@ -34,6 +34,14 @@ jobs:
         with:
           submodules: true
 
+      - name: Set environment
+        run: |
+          chmod +x *.sh
+          echo "unix_time=$(date +%s)" >> "$GITHUB_ENV"
+
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+
       - name: Update vanadium
         if: inputs.update_vanadium || inputs.update_vanadium == 'true'
         run: |
@@ -43,8 +51,6 @@ jobs:
           git checkout $latest_tag
           cd ..
           git add vanadium
-          git config --global user.name 'github-actions[bot]'
-          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
           if ! git diff --staged --quiet; then
             git commit -m "update vanadium to $latest_tag"
             # -f: edits in the Web UI create commits, so a plain push fails
@@ -72,11 +78,6 @@ jobs:
             ccache-chromium-
             ccache-
 
-      - name: Set environment
-        run: |
-          chmod +x *.sh
-          echo "unix_time=$(date +%s)" >> "$GITHUB_ENV"
-
       - name: Install dependencies
         run: |
           sudo apt-get update
@@ -95,7 +96,7 @@ jobs:
           sudo dpkg --add-architecture i386
           sudo apt-get update
           sudo apt-get install -y libgcc-s1:i386
-      
+
       - name: Setup ccache
         run: |
           export CCACHE_DIR="$HOME/.cache/ccache"
@@ -197,7 +198,7 @@ jobs:
           fi
 
           echo CCACHE_COMPILERCHECK="$CCACHE_COMPILERCHECK" >> "$GITHUB_ENV"
-      
+
       - name: Apply titanium patches
         working-directory: chromium/src
         run: |
@@ -233,7 +234,7 @@ jobs:
 
 
           # ─── ccache ────────────────────────────────────────────────────────────────
-          
+
 
           # ─── depot_tools ───────────────────────────────────────────────────────────
 
@@ -387,7 +388,7 @@ jobs:
 
 
 
-         
+
 
           LAST=$(grep -oE '^\[[0-9]+/[0-9]+\]' /tmp/build.log 2>/dev/null | tail -1 || true)
 
