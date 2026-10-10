@@ -63,7 +63,7 @@ jobs:
           echo "Building Chromium $chromium_version"
 
       - name: Restore ccache
-        uses: actions/cache/restore@v6
+        uses: actions/cache/restore@v4
         with:
           path: ~/.cache/ccache
           key: ccache-chromium-${{ env.chromium_version }}-${{ github.run_id }}
@@ -442,7 +442,7 @@ jobs:
 
       - name: Save ccache
         if: always() && steps.build.outputs.save_cache == 'true'
-        uses: actions/cache/save@v6
+        uses: actions/cache/save@v4
         with:
           path: ~/.cache/ccache
           key: ccache-chromium-${{ env.chromium_version }}-${{ github.run_id }}
