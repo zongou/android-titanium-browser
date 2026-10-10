@@ -1,0 +1,528 @@
+name: Ccache Build 2
+
+on:
+  # push:
+  #   paths: .github/workflows/ccache_build2.yml
+  workflow_dispatch:
+    inputs:
+      update_vanadium:
+        description: 'Update vanadium'
+        required: false
+        type: boolean
+        default: false
+  # schedule:
+  #   - cron: '0 0 */16 * *'
+
+permissions:
+  contents: write
+  actions: write
+  id-token: write
+  attestations: write
+
+# # Prevent two builds from creating competing ccache instances simultaneously.
+# concurrency:
+#   group: chromium-build
+#   cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          submodules: true
+
+      - name: Update vanadium
+        if: inputs.update_vanadium || inputs.update_vanadium == 'true'
+        run: |
+          cd vanadium
+          git fetch --tags
+          latest_tag=$(git tag | sort -V | tail -n1)
+          git checkout $latest_tag
+          cd ..
+          git add vanadium
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          if ! git diff --staged --quiet; then
+            git commit -m "update vanadium to $latest_tag"
+            # -f: edits in the Web UI create commits, so a plain push fails
+            # with "! [rejected] main -> main (fetch first)".
+            git push -f
+          fi
+
+      - name: Get Chromium version
+        run: |
+          chromium_version=$(grep -m1 -oE '[0-9]+(\.[0-9]+){3}' vanadium/args.gn)
+          if [ -z "$chromium_version" ]; then
+            echo "::error::Failed to determine Chromium chromium_version"
+            exit 1
+          fi
+          echo "chromium_version=$chromium_version" >> "$GITHUB_ENV"
+          echo "Building Chromium $chromium_version"
+
+      - name: Restore ccache
+        uses: actions/cache/restore@v6
+        with:
+          path: ~/.cache/ccache
+          key: ccache-chromium-${{ env.chromium_version }}-${{ github.run_id }}
+          restore-keys: |
+            ccache-chromium-${{ env.chromium_version }}-
+            ccache-chromium-
+            ccache-
+
+      - name: Set environment
+        run: |
+          chmod +x *.sh
+          echo "unix_time=$(date +%s)" >> "$GITHUB_ENV"
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+              lsb-release \
+              file \
+              nano \
+              git \
+              curl \
+              python3 \
+              python3-pillow \
+              imagemagick \
+              librsvg2-bin \
+              ccache
+
+          sudo dpkg --add-architecture i386
+          sudo apt-get update
+          sudo apt-get install -y libgcc-s1:i386
+      
+      - name: Setup ccache
+        run: |
+          export CCACHE_DIR="$HOME/.cache/ccache"
+          mkdir -p "$CCACHE_DIR"
+
+          export CCACHE_BASEDIR="${{ github.workspace }}"
+          export CCACHE_NOHASHDIR=1
+          export CCACHE_SLOPPINESS="time_macros,include_file_mtime,include_file_ctime,file_stat_matches,pch_defines"
+
+          # Limit is below the GitHub cache quota of 10 GiB.
+          ccache --set-config=max_size=6G
+          ccache --set-config=compression=true
+          ccache --set-config=compression_level=1
+
+          echo "=== ccache: version/config ==="
+          ccache --version | head -1
+          ccache -p | grep -E 'cache_dir|max_size|compression|sloppiness|base_dir|hash_dir' || true
+
+          echo "=== ccache: restored cache stats ==="
+          ccache -s
+
+          # Further counters will relate only to the current run.
+          ccache -z
+
+          echo CCACHE_DIR="$CCACHE_DIR" >> "$GITHUB_ENV"
+          echo CCACHE_BASEDIR="$CCACHE_BASEDIR" >> "$GITHUB_ENV"
+          echo CCACHE_NOHASHDIR="$CCACHE_NOHASHDIR" >> "$GITHUB_ENV"
+          echo CCACHE_SLOPPINESS="$CCACHE_SLOPPINESS" >> "$GITHUB_ENV"
+
+      - name: Setup depot_tools
+        run: |
+          git clone --depth 1 https://chromium.googlesource.com/chromium/tools/depot_tools.git
+          echo "${{ github.workspace }}/depot_tools" >> "$GITHUB_PATH"
+
+      - name: Get Chromium source ${{ env.chromium_version }}
+        env:
+          CHROMIUM_SOURCE: https://github.com/chromium/chromium.git
+          # CHROMIUM_SOURCE: https://chromium.googlesource.com/chromium/src.git
+        run: |
+          mkdir -p chromium/src/out/Default
+          cd chromium/src
+
+          git init -q
+          git remote add origin "$CHROMIUM_SOURCE"
+          git fetch --depth 1 "$CHROMIUM_SOURCE" "+refs/tags/$chromium_version:chromium_$chromium_version"
+          git checkout "$chromium_version"
+
+          cp ${{ github.workspace }}/.gclient ${{ github.workspace }}/chromium/.gclient
+
+      - name: Apply vanadium patches
+        working-directory: chromium/src
+        run: |
+          replace() {
+            export org=$2 new=$3
+            find $1 -type f -exec sed -i 's@'$org'@'$new'@g' {} \;
+          }
+
+          # https://grapheneos.org/build#browser-and-webview
+          rm -rf "${{ github.workspace }}"/vanadium/patches/*trichrome-{apk-build-targets,browser-apk-targets}.patch
+          rm -rf "${{ github.workspace }}"/vanadium/patches/*{detailed,supported}-language*.patch
+          rm -rf "${{ github.workspace }}"/vanadium/patches/*javascript-optimizer-{site-setting,settings-UI}.patch
+          rm -rf "${{ github.workspace }}"/vanadium/patches/*component-updates.patch
+          rm -rf "${{ github.workspace }}"/vanadium/patches/*{pdf,PDF,for-content-public,toolbar-button,configs-from-config-app,new-tab-card,predictive-back*}*.patch
+          # rm -rf "${{ github.workspace }}"/vanadium/patches/*crashpad*.patch
+
+          replace "${{ github.workspace }}/vanadium/patches" "VANADIUM" "TITANIUM"
+          replace "${{ github.workspace }}/vanadium/patches" "Vanadium" "Titanium"
+          replace "${{ github.workspace }}/vanadium/patches" "vanadium" "titanium"
+
+          # Without -3: replace changes blob hashes in patch headers and git am -3 fails
+          # with "sha1 information is lacking or useless".
+          if ! git am --whitespace=nowarn --keep-non-patch "${{ github.workspace }}"/vanadium/patches/*.patch; then
+              echo "::error::Vanadium patches failed to apply"
+              git am --show-current-patch=diff | head -40 || true
+              exit 1
+          fi
+
+      - name: GClient sync & runhooks
+        working-directory: chromium/src
+        run: |
+          gclient sync -D --no-history --nohooks
+          gclient runhooks
+
+          ./build/install-build-deps.sh --no-prompt
+
+      - name: CCache clang version check
+        run: |
+          version_file="${{ github.workspace }}/chromium/src/third_party/llvm-build/Release+Asserts/cr_build_revision"
+          if test -e $version_file; then
+            CLANG_REV=$(cat $version_file)
+
+            if [ -n "$CLANG_REV" ]; then
+              export CCACHE_COMPILERCHECK="string:$CLANG_REV"
+              echo "clang revision: $CLANG_REV"
+            fi
+          else
+            export CCACHE_COMPILERCHECK=content
+            echo "::warning::cr_build_revision not found; using CCACHE_COMPILERCHECK=content"
+          fi
+
+          echo CCACHE_COMPILERCHECK="$CCACHE_COMPILERCHECK" >> "$GITHUB_ENV"
+      
+      - name: Apply titanium patches
+        working-directory: chromium/src
+        run: |
+          source ${{ github.workspace }}/common.sh
+          ${{ github.workspace }}/patch.sh
+
+      - name: Build
+        working-directory: chromium/src
+        id: build
+        env:
+          DEBIAN_FRONTEND: noninteractive
+          LOCAL_TEST_JKS: ${{ secrets.LOCAL_TEST_JKS }}
+          STORE_TEST_JKS: ${{ secrets.STORE_TEST_JKS }}
+        run: |
+          # Enable ccache saving immediately so the save step runs even if interrupted.
+          echo "save_cache=true" >> "$GITHUB_OUTPUT"
+          set -o pipefail
+          status=0
+
+          set -eo pipefail
+
+          export SCRIPT_DIR=${{ github.workspace }}
+          source "${{ github.workspace }}/common.sh"
+          set_keys
+
+          export chromium_version=$(grep -m1 -oE '[0-9]+(\.[0-9]+){3}' "${{ github.workspace }}/vanadium/args.gn")
+          export CHROMIUM_SOURCE="https://chromium.googlesource.com/chromium/src.git"
+          export DEBIAN_FRONTEND=noninteractive
+
+          echo "=== Target Chromium Version: $chromium_version | CPUs: $(nproc) | $(date) ==="
+
+          # ─── APT dependencies ──────────────────────────────────────────────────────
+
+
+          # ─── ccache ────────────────────────────────────────────────────────────────
+          
+
+          # ─── depot_tools ───────────────────────────────────────────────────────────
+
+          # ─── Chromium source ───────────────────────────────────────────────────────
+
+
+          # ─── Vanadium -> Titanium patches ──────────────────────────────────────────
+
+
+          # ─── gclient sync ─────────────────────────────────────────────────────────
+
+
+          # ─── Clang version check for ccache ────────────────────────────────────────
+
+
+          # ─── GN ───────────────────────────────────────────────────────────────────
+          cp "${{ github.workspace }}/args.gn" out/Default/args.gn
+
+          mkdir -p out/tmp out/release
+
+          # If some argument was renamed or removed in this Chromium version,
+          # gn gen fails with "Assignment had no effect". Remove such an argument and retry.
+          gn_gen_retry() {
+            local attempt=0
+            while :; do
+              if gn gen out/Default > /tmp/gn.out 2>/tmp/gn.err; then
+                echo "gn gen: OK"
+                return 0
+              fi
+
+              local unknown
+              unknown=$(grep -oE 'You set the variable "[^"]+"' /tmp/gn.err | head -1 | cut -d'"' -f2 || true)
+
+              if [ -z "$unknown" ]; then
+                echo "::error::gn gen failed"
+                cat /tmp/gn.err
+                return 1
+              fi
+
+              attempt=$((attempt + 1))
+              if [ "$attempt" -gt 10 ]; then
+                echo "::error::Too many unknown gn arguments"
+                cat /tmp/gn.err
+                return 1
+              fi
+
+              echo "::warning::Argument '$unknown' is not supported by this Chromium version — removing from args.gn"
+              sed -i "/^[[:space:]]*${unknown}[[:space:]]*=/d" out/Default/args.gn
+            done
+          }
+
+          gn_gen_retry
+
+          echo "=== ccache toolchain check ==="
+          TC_FILE=$(find out/Default -maxdepth 1 -name 'toolchain.ninja' -print -quit)
+
+          if [ -n "$TC_FILE" ]; then
+              if ! grep -q 'ccache' "$TC_FILE"; then
+                  echo "::error::ccache is missing from $TC_FILE"
+                  grep -m3 -E 'command = .*clang' "$TC_FILE" || true
+                  exit 1
+              fi
+              grep -m1 -E 'command = .*ccache' "$TC_FILE" | cut -c1-220
+          else
+              echo "::warning::toolchain.ninja not found — ccache check skipped"
+          fi
+
+          # ─── Short ccache check ───────────────────────────────────────────────────
+          echo "=== ccache SELF-TEST ==="
+
+          export CCACHE_LOGFILE=/tmp/ccache-selftest.log
+          rm -f "$CCACHE_LOGFILE"
+
+          if timeout 600 ninja -C out/Default obj/base/base/values.o 2>/dev/null; then
+              rm -f out/Default/obj/base/base/values.o
+              timeout 600 ninja -C out/Default obj/base/base/values.o 2>/dev/null || true
+
+              unset CCACHE_LOGFILE
+
+              echo "--- self-test statistics ---"
+              ccache -s
+
+              echo "--- ccache results ---"
+              grep -h 'Result:' /tmp/ccache-selftest.log \
+                  | sed -E 's/^.*Result: //' \
+                  | sort \
+                  | uniq -c \
+                  | sort -rn \
+                  || echo "ccache was not called"
+          else
+              unset CCACHE_LOGFILE
+              echo "::warning::ccache self-test skipped: values.o failed to build"
+          fi
+
+          echo "=== end SELF-TEST ==="
+
+          # ─── Build chrome_public_apk ──────────────────────────────────────────────
+          echo "=== System before compilation ==="
+          df -h / | tail -1
+          free -g | head -2
+
+          # The workflow sees this marker and saves ccache even after timeout.
+          touch /tmp/compile_started
+
+          echo "=== STAGE: compile start $(date) ==="
+          # 320 minutes = 5 hours 20 minutes. This guarantees a 40-minute buffer
+          # before any external GitHub Actions limit (6 hours), preserving cache
+          # and producing a release.
+          timeout --kill-after=30 320m ninja -C out/Default chrome_public_apk 2>&1 | tee /tmp/build.log || status=$?
+          echo "=== STAGE: compile done $(date) ==="
+
+          ccache -s
+
+          # ─── Sign the actual arm64 APK ────────────────────────────────────────────
+          APK_INPUT=$(find out/Default/apks -maxdepth 1 -type f -name 'Chrome*.apk' -print -quit)
+
+          if [ -z "$APK_INPUT" ]; then
+              echo "::error::APK not found in out/Default/apks"
+              find out/Default -type f -name '*.apk' -print || true
+              exit 1
+          fi
+
+          UNSIGNED_APK="out/tmp/${chromium_version}-arm64-v8a-unsigned.apk"
+          SIGNED_APK="out/release/${chromium_version}-arm64-v8a.apk"
+
+          cp "$APK_INPUT" "$UNSIGNED_APK"
+
+          export PATH="$PWD/third_party/jdk/current/bin:$PATH"
+          export ANDROID_HOME="$PWD/third_party/android_sdk/public"
+
+          echo "=== Signing APK ==="
+          echo "Input:  $UNSIGNED_APK"
+          echo "Output: $SIGNED_APK"
+
+          sign_apk "$UNSIGNED_APK" "$SIGNED_APK"
+
+          if [ ! -s "$SIGNED_APK" ]; then
+              echo "::error::Signed APK is missing or empty: $SIGNED_APK"
+              ls -lah out/release || true
+              exit 1
+          fi
+
+          echo "=== Release artifacts ==="
+          ls -lh out/release/
+          sha256sum "$SIGNED_APK"
+
+          echo "=== Build finished successfully! $(date) ==="
+          ccache -s
+
+          rm -rf "${{ github.workspace }}/keys"
+
+
+
+         
+
+          LAST=$(grep -oE '^\[[0-9]+/[0-9]+\]' /tmp/build.log 2>/dev/null | tail -1 || true)
+
+          if [ "$status" -eq 124 ] || [ "$status" -eq 143 ]; then
+            {
+              echo "## ⏱ Step time limit reached — build not finished"
+              echo ""
+              echo "Last compilation progress: **${LAST:-no data}**"
+              echo ""
+              echo "This is an **expected** stage of the multi-run strategy:"
+              echo "ccache is already saved, and the next run will skip already-built objects."
+              echo ""
+              echo "**What to do:** Actions → Build → Run workflow. No file changes needed."
+            } >> "$GITHUB_STEP_SUMMARY"
+            echo "::error::Time limit reached (${LAST:-no data}). ccache saved. Run workflow again — NO file changes needed, cache will be picked up automatically."
+            exit 1
+          fi
+
+          if [ "$status" -ne 0 ]; then
+            echo "::error::build.sh exited with code $status"
+            tail -40 /tmp/build.log
+            exit "$status"
+          fi
+
+          echo "### ✔ Build completed: ${LAST:-done}" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: ccache stats
+        if: always()
+        run: |
+          export CCACHE_DIR="$HOME/.cache/ccache"
+          echo "=== ccache stats (current run) ==="
+          ccache --version | head -1
+          ccache --show-stats -v || ccache --show-stats
+          echo "=== cache size ==="
+          du -sh "$CCACHE_DIR" || true
+
+          # Job Summary: immediately shows whether cache was reused.
+          STATS=$(ccache --print-stats 2>/dev/null || true)
+          HITS=$(echo "$STATS" | awk -F'\t' '/^(direct_cache_hit|preprocessed_cache_hit|remote_storage_hit)/{h+=$2} END{print h+0}')
+          MISS=$(echo "$STATS" | awk -F'\t' '/^cache_miss/{print $2+0}')
+          {
+            echo ""
+            echo "### ccache in this run"
+            echo ""
+            echo "| metric | value |"
+            echo "|---|---|"
+            echo "| hits | ${HITS:-0} |"
+            echo "| misses | ${MISS:-0} |"
+            echo ""
+            echo "Cold run ≈ 0 hits. From the second run there should be many hits."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Save ccache
+        if: always() && steps.build.outputs.save_cache == 'true'
+        uses: actions/cache/save@v6
+        with:
+          path: ~/.cache/ccache
+          key: ccache-chromium-${{ env.chromium_version }}-${{ github.run_id }}
+
+      - name: Auto continue action
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          BRANCH: ${{ github.ref }}
+        run: |
+          gh workflow run ccache_build2.yml \
+           --ref "$GITHUB_REF_NAME" \
+
+      # # Keep a single up-to-date cache in the repository: it is a superset of previous ones.
+      # # Without this, 3–4 runs will hit the GitHub 10 GiB limit and evict the cache.
+      # - name: Purge old ccache entries
+      #   if: always() && steps.build.outputs.save_cache == 'true'
+      #   continue-on-error: true
+      #   env:
+      #     GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      #   run: |
+      #     KEEP="ccache-${{ env.chromium_version }}-${{ github.run_id }}"
+      #     echo "Keeping: $KEEP"
+      #     gh cache list -R "${{ github.repository }}" --limit 100 --json id,key \
+      #       --jq ".[] | select(.key | startswith(\"ccache-\")) | select(.key != \"$KEEP\") | .id" \
+      #       | while read -r id; do
+      #           echo "Deleting old cache id=$id"
+      #           gh cache delete "$id" -R "${{ github.repository }}" || true
+      #         done
+
+      # Look only for a non-empty APK and copy it to the workspace root.
+      # cp, not mv: the file in chromium/src/out/release stays in place.
+      - name: Prepare release APK
+        id: release
+        if: success()
+        shell: bash
+        run: |
+          set -eo pipefail
+          APK=$(find chromium/src/out/release \
+            -maxdepth 1 \
+            -type f \
+            -name '*-arm64-v8a.apk' \
+            -size +0c \
+            -print -quit)
+          if [ -z "$APK" ]; then
+            echo "::error::Non-empty signed arm64-v8a APK not found"
+            echo "=== out/release ==="
+            find chromium/src/out/release -maxdepth 1 -type f -ls 2>/dev/null || true
+            exit 1
+          fi
+          chromium_version_FROM_FILE=$(basename "$APK" | sed 's/-arm64-v8a\.apk$//')
+          if [ -z "$chromium_version_FROM_FILE" ]; then
+            echo "::error::Failed to get version from $APK"
+            exit 1
+          fi
+          RELEASE_APK="${chromium_version_FROM_FILE}-${{ env.unix_time }}-arm64-v8a.apk"
+          cp "$APK" "$RELEASE_APK"
+          if [ ! -s "$RELEASE_APK" ]; then
+            echo "::error::APK prepared for release is empty"
+            exit 1
+          fi
+          echo "chromium_version=$chromium_version_FROM_FILE" >> "$GITHUB_ENV"
+          echo "RELEASE_APK=$RELEASE_APK" >> "$GITHUB_ENV"
+          echo "apk_found=true" >> "$GITHUB_OUTPUT"
+          echo "=== Ready for GitHub Release ==="
+          ls -lh "$RELEASE_APK"
+          sha256sum "$RELEASE_APK"
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        if: steps.release.outputs.apk_found == 'true'
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          name: v${{ env.chromium_version }}
+          tag_name: v${{ env.chromium_version }}
+          files: ${{ env.RELEASE_APK }}
+
+      - name: Attest APK provenance
+        uses: actions/attest-build-provenance@v4
+        if: steps.release.outputs.apk_found == 'true'
+        with:
+          subject-path: ${{ env.RELEASE_APK }}
