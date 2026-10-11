@@ -151,7 +151,7 @@ jobs:
           GH_REPO: ${{ github.repository }}
           BRANCH: ${{ github.ref }}
         run: |
-          gh workflow run ccache_build.yml \
+          gh workflow run ccache_build2.yml \
            --ref "$GITHUB_REF_NAME"
 
       # # Keep a single up-to-date cache in the repository: it is a superset of previous ones.
