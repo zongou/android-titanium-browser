@@ -1,8 +1,8 @@
 name: CCache Build
 
 on:
-  push:
-    paths: .github/workflows/cached_build.yml
+  # push:
+  #   paths: .github/workflows/cached_build.yml
   workflow_dispatch:
     inputs:
       timeout:
