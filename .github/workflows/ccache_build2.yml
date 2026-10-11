@@ -1,4 +1,4 @@
-name: Build
+name: CCache Build 2
 
 on:
   workflow_dispatch:
